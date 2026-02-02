@@ -21,6 +21,7 @@ import { GraphEditorStateService } from './services/graph-editor-state.service';
 import { GraphUndoRedoService } from './services/graph-undo-redo.service';
 import { GraphOperationsService } from './services/graph-operations.service';
 import { GraphCoordinateService } from './services/graph-coordinate.service';
+import { GraphViewportService } from './services/graph-viewport.service';
 import { serializeDiagram } from '../../../graph-core';
 
 /**
@@ -42,6 +43,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   private readonly undoRedo = inject(GraphUndoRedoService);
   private readonly operations = inject(GraphOperationsService);
   private readonly coordinate = inject(GraphCoordinateService);
+  private readonly viewport = inject(GraphViewportService);
 
   protected readonly diagram = this.state.diagram;
   protected readonly renderTick = this.state.renderTick;
@@ -50,7 +52,12 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected readonly linkingPreviewPoint = this.state.linkingPreviewPoint;
   protected readonly selectedNodeIds = this.state.selectedNodeIds;
   protected readonly selectedLinkIds = this.state.selectedLinkIds;
+  protected readonly selectionRect = this.state.selectionRect;
   protected readonly hasSelection = this.state.hasSelection;
+
+  private _spaceKey = false;
+  private _panning: { startClientX: number; startClientY: number; startViewBoxX: number; startViewBoxY: number; pointerId: number; target: Element } | null = null;
+  private _rubberBand: { x1: number; y1: number; pointerId: number; target: Element } | null = null;
 
   private _pendingDrag: { node: Node; startX: number; startY: number } | null = null;
   private _dragging: {
@@ -63,9 +70,13 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   private static readonly STORAGE_KEY = 'graph-canvas-diagram';
 
-  /** Load example diagram on init. */
+  private _wheelHandler = (event: WheelEvent) => this.onCanvasWheel(event);
+
+  /** Load example diagram on init; attach wheel zoom (non-passive so preventDefault works). */
   ngAfterViewInit(): void {
     this.loadDiagramFromJson(MOCK_DIAGRAM_CHAIN);
+    const el = this.svgContainer?.nativeElement;
+    if (el) el.addEventListener('wheel', this._wheelHandler, { passive: false });
   }
 
   /** Load diagram from JSON without pushing undo (initial load or programmatic restore). */
@@ -120,8 +131,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** Clear diagram reference on destroy. */
+  /** Clear diagram reference and wheel listener on destroy. */
   ngOnDestroy(): void {
+    const el = this.svgContainer?.nativeElement;
+    if (el) el.removeEventListener('wheel', this._wheelHandler);
     this.state.setDiagram(null, false);
   }
 
@@ -225,7 +238,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     (e.event.target as Element).setPointerCapture?.(e.event.pointerId);
   }
 
-  /** Update link preview point while dragging. */
+  /** Update link preview point, pan, or rubber-band while dragging. */
   protected onContainerPointerMove(event: PointerEvent): void {
     if (this.state.linkingFrom()) {
       const pt = this.coordinate.clientToSvg(
@@ -234,11 +247,44 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
         event.clientY
       );
       this.state.setLinkingPreviewPoint(pt);
+      return;
+    }
+    const svg = this.svgContainer?.nativeElement;
+    if (this._panning && svg) {
+      const r = svg.getBoundingClientRect();
+      const vb = this.state.viewBox();
+      const dxSvg = ((this._panning.startClientX - event.clientX) * vb.width) / r.width;
+      const dySvg = ((this._panning.startClientY - event.clientY) * vb.height) / r.height;
+      this.viewport.pan(-dxSvg, -dySvg);
+      this._panning.startClientX = event.clientX;
+      this._panning.startClientY = event.clientY;
+      return;
+    }
+    if (this._rubberBand && svg) {
+      const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+      this.state.setSelectionRect({
+        x1: this._rubberBand.x1,
+        y1: this._rubberBand.y1,
+        x2: pt.x,
+        y2: pt.y,
+      });
     }
   }
 
-  /** Complete or cancel link: if over valid input port, create link (undoable). */
+  /** Complete or cancel link; end pan or rubber-band. */
   protected onContainerPointerUp(event: PointerEvent): void {
+    if (this._panning) {
+      this._panning.target.releasePointerCapture?.(this._panning.pointerId);
+      this._panning = null;
+      return;
+    }
+    if (this._rubberBand) {
+      this._rubberBand.target.releasePointerCapture?.(this._rubberBand.pointerId);
+      const rect = this.state.selectionRect();
+      if (rect) this.state.selectNodesInRect(rect);
+      this._rubberBand = null;
+      return;
+    }
     const from = this.state.linkingFrom();
     if (from) {
       const underCursor = document.elementFromPoint(event.clientX, event.clientY);
@@ -287,19 +333,68 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.operations.deleteSelection();
   }
 
-  /** Clear selection when clicking on canvas (not on node/link). */
+  /** Pan, rubber-band, or clear selection on canvas pointer down. */
   protected onCanvasPointerDown(event: PointerEvent): void {
     const target = event.target as Element;
     if (target.closest('g[app-graph-node]') || target.closest('.link-path')) return;
+    if (this.state.linkingFrom()) return;
+
+    const svg = this.svgContainer?.nativeElement;
+    const isMiddle = event.button === 1;
+    const isLeftWithSpace = event.button === 0 && this._spaceKey;
+    const isShiftLeft = event.button === 0 && event.shiftKey;
+
+    if ((isMiddle || isLeftWithSpace) && svg) {
+      const targetEl = event.target as Element;
+      this._panning = {
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startViewBoxX: this.state.viewBox().x,
+        startViewBoxY: this.state.viewBox().y,
+        pointerId: event.pointerId,
+        target: targetEl,
+      };
+      targetEl.setPointerCapture?.(event.pointerId);
+      return;
+    }
+    if (isShiftLeft && svg) {
+      const targetEl = event.target as Element;
+      const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+      this._rubberBand = { x1: pt.x, y1: pt.y, pointerId: event.pointerId, target: targetEl };
+      this.state.setSelectionRect({ x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y });
+      targetEl.setPointerCapture?.(event.pointerId);
+      return;
+    }
     this.state.clearSelection();
   }
 
-  /** Handle Escape (clear selection), Ctrl+A (select all), Ctrl+C/V (copy/paste), Ctrl+Z/Y (undo/redo), Delete/Backspace (delete). */
+  /** Zoom at cursor (wheel). */
+  protected onCanvasWheel(event: WheelEvent): void {
+    event.preventDefault();
+    const svg = this.svgContainer?.nativeElement;
+    if (!svg) return;
+    const center = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+    const factor = event.deltaY > 0 ? 1 / 1.2 : 1.2;
+    this.viewport.zoomAt(factor, center);
+  }
+
+  /** Track Space for pan-with-left-drag. */
+  @HostListener('document:keyup', ['$event'])
+  protected onKeyUp(event: KeyboardEvent): void {
+    if (event.key === ' ') this._spaceKey = false;
+  }
+
+  /** Handle Escape (clear selection), Space (pan mode), Ctrl+A (select all), etc. */
   @HostListener('document:keydown', ['$event'])
   protected onKeyDown(event: KeyboardEvent): void {
     const tag = (event.target as Element)?.tagName;
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
+    if (event.key === ' ') {
+      this._spaceKey = true;
+      event.preventDefault();
+      return;
+    }
     if (event.key === 'Escape') {
       this.state.clearSelection();
       return;
@@ -351,5 +446,50 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Redo one step. */
   protected redo(): void {
     this.undoRedo.redo();
+  }
+
+  /** Whether pan mode is active (Space or middle-drag) for cursor styling. */
+  protected get isPanMode(): boolean {
+    return this._spaceKey || this._panning !== null;
+  }
+
+  /** Normalized selection rect for drawing (x, y, width, height). */
+  protected get normalizedSelectionRect(): { x: number; y: number; width: number; height: number } | null {
+    const r = this.state.selectionRect();
+    if (!r) return null;
+    const x = Math.min(r.x1, r.x2);
+    const y = Math.min(r.y1, r.y2);
+    return {
+      x,
+      y,
+      width: Math.abs(r.x2 - r.x1),
+      height: Math.abs(r.y2 - r.y1),
+    };
+  }
+
+  /** Container size for fitToView/zoomToSelection. */
+  protected getContainerSize(): { width: number; height: number } {
+    const el = this.svgContainer?.nativeElement;
+    if (!el) return { width: 800, height: 600 };
+    const r = el.getBoundingClientRect();
+    return { width: r.width, height: r.height };
+  }
+
+  protected onZoomIn(): void {
+    this.viewport.zoomIn();
+  }
+
+  protected onZoomOut(): void {
+    this.viewport.zoomOut();
+  }
+
+  protected onFitToView(): void {
+    const { width, height } = this.getContainerSize();
+    this.viewport.fitToView(40, width, height);
+  }
+
+  protected onZoomToSelection(): void {
+    const { width, height } = this.getContainerSize();
+    this.viewport.zoomToSelection(40, width, height);
   }
 }

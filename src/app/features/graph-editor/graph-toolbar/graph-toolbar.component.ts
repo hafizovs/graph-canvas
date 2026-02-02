@@ -26,6 +26,10 @@ export class GraphToolbarComponent {
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
+  readonly zoomIn = output<void>();
+  readonly zoomOut = output<void>();
+  readonly fitToView = output<void>();
+  readonly zoomToSelection = output<void>();
   readonly loadExample = output<DiagramJson>();
   readonly saveRequest = output<void>();
   readonly loadFromFile = output<DiagramJson>();
@@ -39,6 +43,22 @@ export class GraphToolbarComponent {
   /** Emit deleteSelection. */
   protected onDeleteSelection(): void {
     this.deleteSelection.emit();
+  }
+
+  protected onZoomIn(): void {
+    this.zoomIn.emit();
+  }
+
+  protected onZoomOut(): void {
+    this.zoomOut.emit();
+  }
+
+  protected onFitToView(): void {
+    this.fitToView.emit();
+  }
+
+  protected onZoomToSelection(): void {
+    this.zoomToSelection.emit();
   }
 
   /** Emit loadExample with selected diagram JSON. */

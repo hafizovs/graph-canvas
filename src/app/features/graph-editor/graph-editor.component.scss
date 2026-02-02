@@ -26,6 +26,14 @@
   cursor: default;
 }
 
+.canvas-wrapper.pan-mode .graph-svg {
+  cursor: grab;
+}
+
+.canvas-wrapper.pan-mode .graph-svg:active {
+  cursor: grabbing;
+}
+
 .link-preview-path {
   pointer-events: none;
 }

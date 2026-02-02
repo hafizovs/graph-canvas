@@ -7,6 +7,10 @@
   <app-graph-toolbar
     (addNode)="onAddNode()"
     (deleteSelection)="onDeleteSelection()"
+    (zoomIn)="onZoomIn()"
+    (zoomOut)="onZoomOut()"
+    (fitToView)="onFitToView()"
+    (zoomToSelection)="onZoomToSelection()"
     (loadExample)="onLoadExample($event)"
     (saveRequest)="onSave()"
     (loadFromFile)="onLoadFromFile($event)"
@@ -14,7 +18,10 @@
     [hasSelection]="hasSelection()"
   />
 
-  <div class="canvas-wrapper">
+  <div
+    class="canvas-wrapper"
+    [class.pan-mode]="isPanMode"
+  >
     <svg
       #svgContainer
       class="graph-svg"
@@ -59,6 +66,20 @@
             ></g>
           }
         </g>
+        @if (normalizedSelectionRect; as nr) {
+          <rect
+            class="selection-rect"
+            [attr.x]="nr.x"
+            [attr.y]="nr.y"
+            [attr.width]="nr.width"
+            [attr.height]="nr.height"
+            fill="var(--selection-rect-fill, rgba(100, 150, 255, 0.1))"
+            stroke="var(--selection-rect-stroke, #48f)"
+            stroke-width="1.5"
+            stroke-dasharray="4 4"
+            pointer-events="none"
+          />
+        }
       </g>
     </svg>
   </div>

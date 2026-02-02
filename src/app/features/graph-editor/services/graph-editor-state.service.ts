@@ -14,6 +14,14 @@ export interface LinkingFromState {
   portType: 'output' | 'input';
 }
 
+/** Rubber-band selection rectangle (any two corners as x1,y1 and x2,y2). */
+export interface SelectionRect {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
 /**
  * Holds all reactive state for the graph editor: diagram, selection, linking preview,
  * viewBox, render tick, id counters, and clipboard. Single source of truth for UI binding.
@@ -31,6 +39,7 @@ export class GraphEditorStateService {
 
   readonly selectedNodeIds = signal<Set<NodeId>>(new Set());
   readonly selectedLinkIds = signal<Set<LinkId>>(new Set());
+  readonly selectionRect = signal<SelectionRect | null>(null);
   readonly hasSelection = computed(
     () =>
       this.selectedNodeIds().size > 0 || this.selectedLinkIds().size > 0
@@ -176,5 +185,40 @@ export class GraphEditorStateService {
   /** Set preview point for link-in-progress. */
   setLinkingPreviewPoint(point: { x: number; y: number } | null): void {
     this.linkingPreviewPoint.set(point);
+  }
+
+  /** Set viewBox (for pan/zoom). */
+  setViewBox(vb: { x: number; y: number; width: number; height: number }): void {
+    this.viewBox.set(vb);
+  }
+
+  /** Set rubber-band selection rectangle (null to clear). */
+  setSelectionRect(rect: SelectionRect | null): void {
+    this.selectionRect.set(rect);
+  }
+
+  /** Select all nodes whose rect intersects the given rect; clears selectionRect. */
+  selectNodesInRect(rect: SelectionRect): void {
+    const d = this.getDiagram();
+    if (!d) {
+      this.setSelectionRect(null);
+      return;
+    }
+    const xMin = Math.min(rect.x1, rect.x2);
+    const xMax = Math.max(rect.x1, rect.x2);
+    const yMin = Math.min(rect.y1, rect.y2);
+    const yMax = Math.max(rect.y1, rect.y2);
+    const ids = new Set<NodeId>();
+    for (const node of d.nodes) {
+      const r = node.getRect();
+      const intersects =
+        r.x + r.width >= xMin &&
+        r.x <= xMax &&
+        r.y + r.height >= yMin &&
+        r.y <= yMax;
+      if (intersects) ids.add(node.id);
+    }
+    this.setNodeSelection(ids);
+    this.setSelectionRect(null);
   }
 }
