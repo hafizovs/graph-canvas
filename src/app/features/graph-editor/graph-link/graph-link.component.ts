@@ -8,6 +8,7 @@ import {
 } from '@angular/core';
 import type { Diagram, Link, PointLike } from '../../../../graph-core';
 
+/** Presentational component for one graph link. Renders SVG path; supports preview target for link-in-progress. */
 @Component({
   selector: 'g[app-graph-link]',
   standalone: true,
@@ -38,6 +39,7 @@ export class GraphLinkComponent {
     return linkVal.buildPath(diagramVal);
   });
 
+  /** Emit linkClick with link and shiftKey for selection. */
   protected onLinkClick(event: MouseEvent): void {
     event.stopPropagation();
     this.linkClick.emit({ link: this.link(), shiftKey: event.shiftKey });

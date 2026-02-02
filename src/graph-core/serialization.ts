@@ -5,7 +5,7 @@ import { Link } from './link';
 import { Port } from './port';
 import type { NodeId, LinkId, PortId } from './types';
 
-/** JSON-serializable port data */
+/** JSON-serializable port data (for save/load and paste). */
 export interface PortDto {
   id: PortId;
   nodeId: string;
@@ -14,7 +14,7 @@ export interface PortDto {
   type: PortType;
 }
 
-/** JSON-serializable node data */
+/** JSON-serializable node data (for save/load and paste). */
 export interface NodeDto {
   id: NodeId;
   x: number;
@@ -25,7 +25,7 @@ export interface NodeDto {
   ports: PortDto[];
 }
 
-/** JSON-serializable link data */
+/** JSON-serializable link data (for save/load and paste). */
 export interface LinkDto {
   id: LinkId;
   sourcePortId: PortId;
@@ -33,14 +33,16 @@ export interface LinkDto {
   points?: Array<{ x: number; y: number }>;
 }
 
-/** JSON-serializable diagram data */
+/** JSON-serializable diagram data; format for file storage and undo/redo snapshots. */
 export interface DiagramJson {
   nodes: NodeDto[];
   links: LinkDto[];
 }
 
 /**
- * Serialize a diagram to a plain JSON-serializable object.
+ * Serialize a diagram to a plain JSON-serializable object (for save, undo stack, clipboard).
+ * @param diagram - Current diagram instance
+ * @returns DiagramJson
  */
 export function serializeDiagram(diagram: Diagram): DiagramJson {
   const nodes: NodeDto[] = diagram.nodes.map((node) => ({
@@ -75,7 +77,9 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
 }
 
 /**
- * Deserialize a diagram from a plain JSON object.
+ * Deserialize a diagram from a plain JSON object (load file, undo/redo restore).
+ * @param json - Valid DiagramJson (nodes and links arrays)
+ * @returns New Diagram instance
  */
 export function deserializeDiagram(json: DiagramJson): Diagram {
   const diagram = new Diagram();
@@ -118,8 +122,14 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
 }
 
 /**
- * Clone a DiagramJson with new ids and an position offset (for paste).
- * Returns the new JSON and the list of new node ids (for selection).
+ * Clone a DiagramJson with new node/link/port ids and position offset (for paste).
+ * Node ids become n{startNodeCounter+1}, n{startNodeCounter+2}, ...; links l{startLinkCounter+1}, ...
+ * @param json - Source diagram JSON (e.g. from clipboard)
+ * @param offsetX - Added to every node x
+ * @param offsetY - Added to every node y
+ * @param startNodeCounter - Current max node number (e.g. from state); new nodes get higher numbers
+ * @param startLinkCounter - Current max link number; new links get higher numbers
+ * @returns New DiagramJson and list of new node ids (for selecting pasted nodes)
  */
 export function cloneDiagramJsonForPaste(
   json: DiagramJson,

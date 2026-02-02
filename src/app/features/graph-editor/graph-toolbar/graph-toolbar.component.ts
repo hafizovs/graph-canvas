@@ -12,6 +12,7 @@ import {
   MOCK_DIAGRAM_DIAMOND,
 } from '../../../../graph-core';
 
+/** Toolbar: add node, delete selection, load example/file/storage, save. Emits events; parent handles logic. */
 @Component({
   selector: 'app-graph-toolbar',
   standalone: true,
@@ -30,14 +31,17 @@ export class GraphToolbarComponent {
   readonly loadFromFile = output<DiagramJson>();
   readonly loadFromStorage = output<void>();
 
+  /** Emit addNode. */
   protected onAddNode(): void {
     this.addNode.emit();
   }
 
+  /** Emit deleteSelection. */
   protected onDeleteSelection(): void {
     this.deleteSelection.emit();
   }
 
+  /** Emit loadExample with selected diagram JSON. */
   protected onLoadExample(json: DiagramJson): void {
     this.loadExample.emit(json);
   }
@@ -47,18 +51,22 @@ export class GraphToolbarComponent {
   protected readonly exampleChain = MOCK_DIAGRAM_CHAIN;
   protected readonly exampleDiamond = MOCK_DIAGRAM_DIAMOND;
 
+  /** Emit saveRequest. */
   protected onSave(): void {
     this.saveRequest.emit();
   }
 
+  /** Emit loadFromStorage. */
   protected onLoadFromStorage(): void {
     this.loadFromStorage.emit();
   }
 
+  /** Trigger file input click. */
   protected onLoadFile(fileInput: HTMLInputElement): void {
     fileInput.click();
   }
 
+  /** Parse selected file as DiagramJson and emit loadFromFile. */
   protected onFileSelected(event: Event, fileInput: HTMLInputElement): void {
     const input = event.target as HTMLInputElement;
     const file = input.files?.[0];

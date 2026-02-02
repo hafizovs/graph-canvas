@@ -1,6 +1,7 @@
 import { Point } from './point';
 import type { PortId, PortSide, PortType, Rect } from './types';
 
+/** Configuration for creating a Port. */
 export interface PortConfig {
   id: PortId;
   nodeId: string;
@@ -9,7 +10,9 @@ export interface PortConfig {
   type: PortType;
 }
 
-/** Port - connection point on a node */
+/**
+ * Port – connection point on a node. Position is computed from the node's rect and port side/offset.
+ */
 export class Port implements PortConfig {
   readonly id: PortId;
   readonly nodeId: string;
@@ -25,7 +28,12 @@ export class Port implements PortConfig {
     this.type = config.type;
   }
 
-  /** Get absolute position of port given the node's rect */
+  /**
+   * Get absolute position of this port given the node's bounding rect.
+   * Offset is applied along the side (e.g. left side: offset from top).
+   * @param rect - Node's rectangle (x, y, width, height)
+   * @returns Point in diagram coordinates
+   */
   getAbsolutePosition(rect: Rect): Point {
     const { x, y, width, height } = rect;
     switch (this.side) {

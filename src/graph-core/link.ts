@@ -2,6 +2,7 @@ import { Point } from './point';
 import type { LinkId, PortId } from './types';
 import type { Diagram } from './diagram';
 
+/** Configuration for creating a Link. */
 export interface LinkConfig {
   id: LinkId;
   sourcePortId: PortId;
@@ -9,7 +10,9 @@ export interface LinkConfig {
   points?: Array<{ x: number; y: number }>;
 }
 
-/** Link - connection between two ports, with optional waypoints */
+/**
+ * Link – connection between two ports. Optional waypoints for polyline; otherwise straight line.
+ */
 export class Link implements LinkConfig {
   readonly id: LinkId;
   readonly sourcePortId: PortId;
@@ -23,7 +26,11 @@ export class Link implements LinkConfig {
     this.points = (config.points ?? []).map((p) => new Point(p.x, p.y));
   }
 
-  /** Build SVG path d attribute. Uses waypoints if present, else straight line. */
+  /**
+   * Build SVG path d attribute: M source L target, or M source L waypoint... L target.
+   * @param diagram - Used to resolve port positions
+   * @returns Path d string, or '' if port positions not found
+   */
   buildPath(diagram: Diagram): string {
     const source = diagram.getPortPosition(this.sourcePortId);
     const target = diagram.getPortPosition(this.targetPortId);

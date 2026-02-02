@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { deserializeDiagram, serializeDiagram } from './serialization';
+import {
+  deserializeDiagram,
+  serializeDiagram,
+  cloneDiagramJsonForPaste,
+} from './serialization';
 import {
   MOCK_DIAGRAM_EMPTY,
   MOCK_DIAGRAM_SINGLE_NODE,
@@ -60,5 +64,59 @@ describe('serializeDiagram', () => {
     expect(diagram2.nodes).toHaveLength(diagram.nodes.length);
     expect(diagram2.links).toHaveLength(diagram.links.length);
     expect(diagram2.getNode('n1')?.x).toBe(diagram.getNode('n1')?.x);
+  });
+});
+
+describe('cloneDiagramJsonForPaste', () => {
+  it('produces new node and link ids', () => {
+    const { json, newNodeIds } = cloneDiagramJsonForPaste(
+      MOCK_DIAGRAM_CHAIN,
+      0,
+      0,
+      0,
+      0
+    );
+    expect(json.nodes.map((n) => n.id)).toEqual(['n1', 'n2', 'n3']);
+    expect(json.links.map((l) => l.id)).toEqual(['l1', 'l2']);
+    expect(newNodeIds).toEqual(['n1', 'n2', 'n3']);
+  });
+
+  it('applies position offset to nodes', () => {
+    const { json } = cloneDiagramJsonForPaste(
+      MOCK_DIAGRAM_SINGLE_NODE,
+      50,
+      60,
+      0,
+      0
+    );
+    expect(json.nodes).toHaveLength(1);
+    expect(json.nodes[0].x).toBe(100 + 50);
+    expect(json.nodes[0].y).toBe(100 + 60);
+  });
+
+  it('uses startNodeCounter and startLinkCounter for new ids', () => {
+    const { json } = cloneDiagramJsonForPaste(
+      MOCK_DIAGRAM_SINGLE_NODE,
+      0,
+      0,
+      5,
+      10
+    );
+    expect(json.nodes[0].id).toBe('n6');
+    expect(json.links).toHaveLength(0);
+  });
+
+  it('remaps port ids and link port references', () => {
+    const { json } = cloneDiagramJsonForPaste(
+      MOCK_DIAGRAM_CHAIN,
+      0,
+      0,
+      0,
+      0
+    );
+    const n1 = json.nodes.find((n) => n.id === 'n1')!;
+    expect(n1.ports.every((p) => p.nodeId === 'n1')).toBe(true);
+    expect(json.links[0].sourcePortId).toBeDefined();
+    expect(json.links[0].targetPortId).toBeDefined();
   });
 });
