@@ -1,0 +1,65 @@
+<div class="graph-editor" (mousemove)="$event.stopPropagation()" (mouseup)="$event.stopPropagation()" [attr.data-tick]="renderTick()">
+  <svg
+    #svgContainer
+    class="graph-svg"
+    [attr.viewBox]="viewBox().x + ' ' + viewBox().y + ' ' + viewBox().width + ' ' + viewBox().height"
+    preserveAspectRatio="xMidYMid meet"
+  >
+    <g class="graph-content">
+      <!-- Links layer (below nodes) -->
+      <g class="links-layer">
+        @for (link of diagram()?.links ?? []; track link.id) {
+          <path
+            class="link-path"
+            [attr.d]="getLinkPath(link)"
+            fill="none"
+            stroke="var(--link-stroke, #666)"
+            stroke-width="2"
+            vector-effect="non-scaling-stroke"
+          />
+        }
+      </g>
+      <!-- Nodes layer -->
+      <g class="nodes-layer">
+        @for (node of diagram()?.nodes ?? []; track node.id; let i = $index) {
+          <g
+            class="node"
+            [attr.transform]="'translate(' + node.x + ',' + node.y + ')'"
+            (pointerdown)="onNodePointerDown(node, $event)"
+            (pointermove)="onNodePointerMove(node, $event)"
+            (pointerup)="onNodePointerUp(node, $event)"
+            (pointerleave)="onNodePointerUp(node, $event)"
+          >
+            <rect
+              class="node-rect"
+              [attr.width]="node.width"
+              [attr.height]="node.height"
+              rx="6"
+              ry="6"
+            />
+            <text
+              class="node-label"
+              [attr.x]="node.width / 2"
+              [attr.y]="node.height / 2"
+              dominant-baseline="middle"
+              text-anchor="middle"
+            >
+              {{ node.label }}
+            </text>
+            @for (port of node.ports; track port.id) {
+              @let pos = port.getAbsolutePosition(node.getRect());
+              <circle
+                class="port"
+                [class.port-input]="port.type === 'input'"
+                [class.port-output]="port.type === 'output'"
+                [attr.cx]="pos.x - node.x"
+                [attr.cy]="pos.y - node.y"
+                [attr.r]="6"
+              />
+            }
+          </g>
+        }
+      </g>
+    </g>
+  </svg>
+</div>

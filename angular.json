@@ -61,10 +61,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "dtps-graph-editor:build:production"
+              "buildTarget": "graph-canvas:build:production"
             },
             "development": {
-              "buildTarget": "dtps-graph-editor:build:development"
+              "buildTarget": "graph-canvas:build:development"
             }
           },
           "defaultConfiguration": "development"
