@@ -4,8 +4,10 @@ import {
   AfterViewInit,
   OnDestroy,
   signal,
+  computed,
   ViewChild,
   ElementRef,
+  HostListener,
 } from '@angular/core';
 import {
   Diagram,
@@ -13,7 +15,7 @@ import {
   Link,
   Port,
 } from '../../../graph-core';
-import type { NodeId, PortId } from '../../../graph-core';
+import type { NodeId, LinkId, PortId } from '../../../graph-core';
 import { GraphLinkComponent } from './graph-link/graph-link.component';
 import { GraphNodeComponent } from './graph-node/graph-node.component';
 import { GraphToolbarComponent } from './graph-toolbar/graph-toolbar.component';
@@ -42,8 +44,16 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   } | null>(null);
   protected readonly linkingPreviewPoint = signal<{ x: number; y: number } | null>(null);
 
+  protected readonly selectedNodeId = signal<NodeId | null>(null);
+  protected readonly selectedLinkId = signal<LinkId | null>(null);
+  protected readonly hasSelection = computed(
+    () => this.selectedNodeId() != null || this.selectedLinkId() != null
+  );
+
   private _diagram: Diagram | null = null;
+  private _pendingDrag: { node: Node; startX: number; startY: number } | null = null;
   private _dragging: { node: Node; startX: number; startY: number } | null = null;
+  private static readonly DRAG_THRESHOLD_PX = 4;
   private _nodeIdCounter = 0;
   private _linkIdCounter = 0;
 
@@ -208,22 +218,36 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onNodePointerDown(e: NodePointerEvent): void {
     if (this.linkingFrom()) return;
     const pt = this.clientToSvg(e.event.clientX, e.event.clientY);
-    this._dragging = { node: e.node, startX: pt.x - e.node.x, startY: pt.y - e.node.y };
+    this._pendingDrag = { node: e.node, startX: pt.x - e.node.x, startY: pt.y - e.node.y };
     (e.event.target as Element).setPointerCapture?.(e.event.pointerId);
   }
 
   protected onNodePointerMove(e: NodePointerEvent): void {
+    const pt = this.clientToSvg(e.event.clientX, e.event.clientY);
+    if (this._pendingDrag?.node === e.node) {
+      const dx = pt.x - (e.node.x + this._pendingDrag.startX);
+      const dy = pt.y - (e.node.y + this._pendingDrag.startY);
+      if (Math.sqrt(dx * dx + dy * dy) > GraphEditorComponent.DRAG_THRESHOLD_PX) {
+        this._dragging = this._pendingDrag;
+        this._pendingDrag = null;
+      } else {
+        return;
+      }
+    }
     if (!this._dragging || this._dragging.node !== e.node) return;
     const { startX, startY } = this._dragging;
-    const pt = this.clientToSvg(e.event.clientX, e.event.clientY);
     e.node.setPosition(pt.x - startX, pt.y - startY);
     this.renderTick.update((v) => v + 1);
   }
 
   protected onNodePointerUp(e: NodePointerEvent): void {
+    (e.event.target as Element).releasePointerCapture?.(e.event.pointerId);
     if (this._dragging?.node === e.node) {
-      (e.event.target as Element).releasePointerCapture?.(e.event.pointerId);
       this._dragging = null;
+    } else if (this._pendingDrag?.node === e.node) {
+      this.selectedNodeId.set(e.node.id);
+      this.selectedLinkId.set(null);
+      this._pendingDrag = null;
     }
   }
 
@@ -299,5 +323,45 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     const source = d.getPortPosition(from.portId);
     if (!source) return '';
     return `M ${source.x} ${source.y} L ${preview.x} ${preview.y}`;
+  }
+
+  protected onLinkSelect(link: Link): void {
+    this.selectedLinkId.set(link.id);
+    this.selectedNodeId.set(null);
+  }
+
+  protected onDeleteSelection(): void {
+    const d = this._diagram;
+    if (!d) return;
+    const nodeId = this.selectedNodeId();
+    const linkId = this.selectedLinkId();
+    if (nodeId) {
+      d.removeNode(nodeId);
+      this.selectedNodeId.set(null);
+      this.selectedLinkId.set(null);
+      this.diagram.set(d);
+      this.renderTick.update((v) => v + 1);
+    } else if (linkId) {
+      d.removeLink(linkId);
+      this.selectedNodeId.set(null);
+      this.selectedLinkId.set(null);
+      this.diagram.set(d);
+      this.renderTick.update((v) => v + 1);
+    }
+  }
+
+  protected onCanvasPointerDown(event: PointerEvent): void {
+    const target = event.target as Element;
+    if (target.closest('g[app-graph-node]') || target.closest('.link-path')) return;
+    this.selectedNodeId.set(null);
+    this.selectedLinkId.set(null);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  protected onKeyDown(event: KeyboardEvent): void {
+    const tag = (event.target as Element)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+    this.onDeleteSelection();
   }
 }

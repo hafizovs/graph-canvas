@@ -15,6 +15,11 @@
   :host:hover & {
     filter: brightness(0.97);
   }
+
+  &.node-selected {
+    stroke: var(--node-selected-stroke, #06c);
+    stroke-width: 3;
+  }
 }
 
 .node-label {

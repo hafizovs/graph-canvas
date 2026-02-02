@@ -14,10 +14,16 @@ import {
 })
 export class GraphToolbarComponent {
   readonly disabled = input<boolean>(false);
+  readonly hasSelection = input<boolean>(false);
 
   readonly addNode = output<void>();
+  readonly deleteSelection = output<void>();
 
   protected onAddNode(): void {
     this.addNode.emit();
+  }
+
+  protected onDeleteSelection(): void {
+    this.deleteSelection.emit();
   }
 }

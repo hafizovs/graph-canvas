@@ -1,8 +1,10 @@
 <svg:path
   class="link-path"
+  [class.link-selected]="selected()"
   [attr.d]="pathD()"
   fill="none"
   [attr.stroke]="previewTarget() ? 'var(--link-preview-stroke, #95a)' : 'var(--link-stroke, #666)'"
   stroke-width="2"
   vector-effect="non-scaling-stroke"
+  (click)="onLinkClick($event)"
 />

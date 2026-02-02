@@ -2,6 +2,7 @@ import {
   Component,
   ChangeDetectionStrategy,
   input,
+  output,
   computed,
   NO_ERRORS_SCHEMA,
 } from '@angular/core';
@@ -19,6 +20,9 @@ export class GraphLinkComponent {
   readonly link = input.required<Link>();
   readonly diagram = input.required<Diagram>();
   readonly previewTarget = input<PointLike | null>(null);
+  readonly selected = input<boolean>(false);
+
+  readonly linkClick = output<Link>();
 
   protected readonly pathD = computed(() => {
     const linkVal = this.link();
@@ -33,4 +37,9 @@ export class GraphLinkComponent {
 
     return linkVal.buildPath(diagramVal);
   });
+
+  protected onLinkClick(event: MouseEvent): void {
+    event.stopPropagation();
+    this.linkClick.emit(this.link());
+  }
 }

@@ -4,5 +4,10 @@
 
 .link-path {
   pointer-events: stroke;
-  cursor: default;
+  cursor: pointer;
+
+  &.link-selected {
+    stroke: var(--link-selected-stroke, #06c);
+    stroke-width: 3;
+  }
 }

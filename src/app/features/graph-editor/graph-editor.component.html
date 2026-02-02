@@ -4,7 +4,11 @@
   (pointermove)="onContainerPointerMove($event)"
   (pointerup)="onContainerPointerUp($event)"
 >
-  <app-graph-toolbar (addNode)="onAddNode()" />
+  <app-graph-toolbar
+    (addNode)="onAddNode()"
+    (deleteSelection)="onDeleteSelection()"
+    [hasSelection]="hasSelection()"
+  />
 
   <div class="canvas-wrapper">
     <svg
@@ -12,11 +16,18 @@
       class="graph-svg"
       [attr.viewBox]="viewBox().x + ' ' + viewBox().y + ' ' + viewBox().width + ' ' + viewBox().height"
       preserveAspectRatio="xMidYMid meet"
+      (pointerdown)="onCanvasPointerDown($event)"
     >
       <g class="graph-content">
         <g class="links-layer">
           @for (link of diagram()?.links ?? []; track link.id) {
-            <g app-graph-link [link]="link" [diagram]="diagram()!"></g>
+            <g
+              app-graph-link
+              [link]="link"
+              [diagram]="diagram()!"
+              [selected]="selectedLinkId() === link.id"
+              (linkClick)="onLinkSelect(link)"
+            ></g>
           }
           @if (linkingFrom() && linkingPreviewPoint()) {
             <path
@@ -36,6 +47,7 @@
             <g
               app-graph-node
               [node]="node"
+              [selected]="selectedNodeId() === node.id"
               (nodePointerDown)="onNodePointerDown($event)"
               (nodePointerMove)="onNodePointerMove($event)"
               (nodePointerUp)="onNodePointerUp($event)"
