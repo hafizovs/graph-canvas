@@ -1,0 +1,13 @@
+---
+description: Graph editor conventions - core vs Angular, lifecycle, cleanup
+globs: "**/graph-core/**/*.ts,**/components/graph*/**/*.ts"
+alwaysApply: false
+---
+
+# Graph Editor Conventions
+
+- **Graph core** (`graph-core/`) must not import from `@angular/*`; keep it framework-agnostic.
+- **Angular layer** (components, services) wraps the core: attach in `ngAfterViewInit`, detach in `ngOnDestroy`.
+- Lifecycle: create Graph → attach(container) → start() → setEntities(); cleanup: detach() in ngOnDestroy.
+- Unsubscribe from all graph events and signals in `ngOnDestroy` to avoid memory leaks.
+- Do not mix core types (Graph, Camera, Store) with Angular-specific types in the same file.

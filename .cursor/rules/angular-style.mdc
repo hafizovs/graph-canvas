@@ -1,0 +1,13 @@
+---
+description: Angular style - file naming, structure, OnPush
+globs: "**/*.ts,**/*.html"
+alwaysApply: false
+---
+
+# Angular Style
+
+- Use **concise file naming** (e.g. `app.ts`, `app.html`) per Angular 2025 style guide.
+- Prefer **features/core/shared** folder structure for app code.
+- Use **ChangeDetectionStrategy.OnPush** for presentational components where possible.
+- Call **ChangeDetectorRef.markForCheck()** when updating from async/subscription callbacks.
+- Keep components focused; extract logic into services or signals.

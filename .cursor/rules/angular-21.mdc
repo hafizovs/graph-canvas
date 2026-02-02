@@ -1,0 +1,15 @@
+---
+description: Angular 21 conventions - standalone, zoneless, signals
+globs: "**/*.ts"
+alwaysApply: true
+---
+
+# Angular 21 Conventions
+
+- Use **standalone components** by default; avoid NgModules unless needed for lazy loading or legacy.
+- **Zoneless change detection** is the default in Angular 21; do not rely on Zone.js unless opting back in.
+- Prefer **Angular Signals** for reactive state where it integrates with the UI (`signal()`, `computed()`, `effect()`).
+- Use **TypeScript 5.9+** with strict mode enabled.
+- Prefer **typed forms** from `@angular/forms` when building forms.
+- **Vitest** is the default test runner; use it for unit tests instead of Jasmine.
+- One small, focused commit per feature or change.

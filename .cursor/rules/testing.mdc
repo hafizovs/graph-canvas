@@ -1,0 +1,12 @@
+---
+description: Testing - Vitest, mocks for Graph and Camera
+globs: "**/*.spec.ts"
+alwaysApply: false
+---
+
+# Testing
+
+- Use **Vitest** for unit tests (default in Angular 21).
+- Mock **Graph** and **CameraService** (or core Graph/Camera) in component tests that use the canvas.
+- For components that need a DOM/canvas, use `TestBed` with providers that supply mock graph instances.
+- Prefer shallow tests for components that only pass through to graph API; integration tests for full flows.
