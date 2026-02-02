@@ -6,10 +6,18 @@
 }
 
 .graph-editor {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   height: 100%;
   min-height: 400px;
   background: var(--editor-bg, #f5f5f5);
+}
+
+.canvas-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .graph-svg {
@@ -18,48 +26,6 @@
   cursor: default;
 }
 
-.node {
-  cursor: grab;
-
-  &:active {
-    cursor: grabbing;
-  }
-}
-
-.node-rect {
-  fill: var(--node-fill, #fff);
-  stroke: var(--node-stroke, #333);
-  stroke-width: 2;
-  transition: filter 0.15s ease;
-
-  .node:hover & {
-    filter: brightness(0.97);
-  }
-}
-
-.node-label {
-  font-size: 14px;
-  fill: var(--node-label-color, #222);
+.link-preview-path {
   pointer-events: none;
-  user-select: none;
-}
-
-.port {
-  fill: var(--port-fill, #555);
-  stroke: var(--port-stroke, #333);
-  stroke-width: 2;
-  pointer-events: none;
-
-  &.port-input {
-    fill: var(--port-input-fill, #5a9);
-  }
-
-  &.port-output {
-    fill: var(--port-output-fill, #95a);
-  }
-}
-
-.link-path {
-  pointer-events: stroke;
-  cursor: default;
 }

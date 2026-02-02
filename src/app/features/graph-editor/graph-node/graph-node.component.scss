@@ -1,0 +1,40 @@
+:host {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.node-rect {
+  fill: var(--node-fill, #fff);
+  stroke: var(--node-stroke, #333);
+  stroke-width: 2;
+  transition: filter 0.15s ease;
+
+  :host:hover & {
+    filter: brightness(0.97);
+  }
+}
+
+.node-label {
+  font-size: 14px;
+  fill: var(--node-label-color, #222);
+  pointer-events: none;
+  user-select: none;
+}
+
+.port {
+  fill: var(--port-fill, #555);
+  stroke: var(--port-stroke, #333);
+  stroke-width: 2;
+  cursor: crosshair;
+
+  &.port-input {
+    fill: var(--port-input-fill, #5a9);
+  }
+
+  &.port-output {
+    fill: var(--port-output-fill, #95a);
+  }
+}

@@ -13,11 +13,18 @@ import {
   Link,
   Port,
 } from '../../../graph-core';
+import type { NodeId, PortId } from '../../../graph-core';
+import { GraphLinkComponent } from './graph-link/graph-link.component';
+import { GraphNodeComponent } from './graph-node/graph-node.component';
+import { GraphToolbarComponent } from './graph-toolbar/graph-toolbar.component';
+import type { NodePointerEvent } from './graph-node/graph-node.component';
+import type { PortPointerEvent } from './graph-node/graph-node.component';
 
 @Component({
   selector: 'app-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [GraphLinkComponent, GraphNodeComponent, GraphToolbarComponent],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
 })
@@ -28,8 +35,17 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected readonly renderTick = signal(0);
   protected readonly viewBox = signal({ x: 0, y: 0, width: 800, height: 600 });
 
+  protected readonly linkingFrom = signal<{
+    portId: PortId;
+    nodeId: NodeId;
+    portType: 'output' | 'input';
+  } | null>(null);
+  protected readonly linkingPreviewPoint = signal<{ x: number; y: number } | null>(null);
+
   private _diagram: Diagram | null = null;
   private _dragging: { node: Node; startX: number; startY: number } | null = null;
+  private _nodeIdCounter = 0;
+  private _linkIdCounter = 0;
 
   ngAfterViewInit(): void {
     this._diagram = this.createSampleDiagram();
@@ -146,31 +162,142 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     return { x: svgP.x, y: svgP.y };
   }
 
-  protected onNodePointerDown(node: Node, event: PointerEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-    const pt = this.clientToSvg(event.clientX, event.clientY);
-    this._dragging = { node, startX: pt.x - node.x, startY: pt.y - node.y };
-    (event.target as Element).setPointerCapture?.(event.pointerId);
-  }
+  protected onAddNode(): void {
+    const d = this._diagram;
+    if (!d) return;
 
-  protected onNodePointerMove(node: Node, event: PointerEvent): void {
-    if (!this._dragging || this._dragging.node !== node) return;
-    const { startX, startY } = this._dragging;
-    const pt = this.clientToSvg(event.clientX, event.clientY);
-    node.setPosition(pt.x - startX, pt.y - startY);
+    this._nodeIdCounter++;
+    const nodeId = `n${this._nodeIdCounter}` as NodeId;
+    const vb = this.viewBox();
+    const x = vb.x + vb.width / 2 - 60;
+    const y = vb.y + vb.height / 2 - 30;
+
+    const node = new Node({
+      id: nodeId,
+      x,
+      y,
+      width: 120,
+      height: 60,
+      label: `Node ${this._nodeIdCounter}`,
+      ports: [],
+    });
+    node.addPort(
+      new Port({
+        id: `${nodeId}-in` as PortId,
+        nodeId,
+        side: 'left',
+        offset: 30,
+        type: 'input',
+      })
+    );
+    node.addPort(
+      new Port({
+        id: `${nodeId}-out` as PortId,
+        nodeId,
+        side: 'right',
+        offset: 30,
+        type: 'output',
+      })
+    );
+
+    d.addNode(node);
+    this.diagram.set(d);
     this.renderTick.update((v) => v + 1);
   }
 
-  protected onNodePointerUp(node: Node, event: PointerEvent): void {
-    if (this._dragging?.node === node) {
-      (event.target as Element).releasePointerCapture?.(event.pointerId);
+  protected onNodePointerDown(e: NodePointerEvent): void {
+    if (this.linkingFrom()) return;
+    const pt = this.clientToSvg(e.event.clientX, e.event.clientY);
+    this._dragging = { node: e.node, startX: pt.x - e.node.x, startY: pt.y - e.node.y };
+    (e.event.target as Element).setPointerCapture?.(e.event.pointerId);
+  }
+
+  protected onNodePointerMove(e: NodePointerEvent): void {
+    if (!this._dragging || this._dragging.node !== e.node) return;
+    const { startX, startY } = this._dragging;
+    const pt = this.clientToSvg(e.event.clientX, e.event.clientY);
+    e.node.setPosition(pt.x - startX, pt.y - startY);
+    this.renderTick.update((v) => v + 1);
+  }
+
+  protected onNodePointerUp(e: NodePointerEvent): void {
+    if (this._dragging?.node === e.node) {
+      (e.event.target as Element).releasePointerCapture?.(e.event.pointerId);
       this._dragging = null;
     }
   }
 
-  protected getLinkPath(link: Link): string {
+  protected onPortPointerDown(e: PortPointerEvent): void {
+    if (this.linkingFrom()) return;
+    if (e.port.type !== 'output') return;
+
+    this.linkingFrom.set({
+      portId: e.port.id,
+      nodeId: e.node.id,
+      portType: 'output',
+    });
+    const pt = this.clientToSvg(e.event.clientX, e.event.clientY);
+    this.linkingPreviewPoint.set(pt);
+    (e.event.target as Element).setPointerCapture?.(e.event.pointerId);
+  }
+
+  protected onContainerPointerMove(event: PointerEvent): void {
+    if (this.linkingFrom()) {
+      const pt = this.clientToSvg(event.clientX, event.clientY);
+      this.linkingPreviewPoint.set(pt);
+    }
+  }
+
+  protected onContainerPointerUp(event: PointerEvent): void {
+    const from = this.linkingFrom();
+    if (from) {
+      const underCursor = document.elementFromPoint(event.clientX, event.clientY);
+      const target = underCursor?.closest('[data-port-id][data-port-type][data-node-id]');
+      const targetPortId = target?.getAttribute('data-port-id') as PortId | null;
+      const targetPortType = target?.getAttribute('data-port-type');
+      const targetNodeId = target?.getAttribute('data-node-id') as NodeId | null;
+
+      if (
+        targetPortId &&
+        targetPortType === 'input' &&
+        targetNodeId &&
+        targetNodeId !== from.nodeId
+      ) {
+        const d = this._diagram;
+        if (d) {
+          const hasExisting =
+            d.links.some(
+              (l) =>
+                l.sourcePortId === from.portId && l.targetPortId === targetPortId
+            ) || d.links.some((l) => l.targetPortId === targetPortId);
+          if (!hasExisting) {
+            this._linkIdCounter++;
+            d.addLink(
+              new Link({
+                id: `l${this._linkIdCounter}`,
+                sourcePortId: from.portId,
+                targetPortId,
+              })
+            );
+            this.diagram.set(d);
+            this.renderTick.update((v) => v + 1);
+          }
+        }
+      }
+
+      this.linkingFrom.set(null);
+      this.linkingPreviewPoint.set(null);
+    }
+  }
+
+  protected getPreviewPathD(): string {
+    const from = this.linkingFrom();
+    const preview = this.linkingPreviewPoint();
     const d = this._diagram;
-    return d ? link.buildPath(d) : '';
+    if (!from || !preview || !d) return '';
+
+    const source = d.getPortPosition(from.portId);
+    if (!source) return '';
+    return `M ${source.x} ${source.y} L ${preview.x} ${preview.y}`;
   }
 }

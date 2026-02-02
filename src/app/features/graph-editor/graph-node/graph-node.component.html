@@ -1,0 +1,31 @@
+<rect
+  class="node-rect"
+  [attr.width]="node().width"
+  [attr.height]="node().height"
+  rx="6"
+  ry="6"
+/>
+<text
+  class="node-label"
+  [attr.x]="node().width / 2"
+  [attr.y]="node().height / 2"
+  dominant-baseline="middle"
+  text-anchor="middle"
+>
+  {{ node().label }}
+</text>
+@for (port of node().ports; track port.id) {
+  @let pos = getPortPosition(port);
+  <circle
+    class="port"
+    [class.port-input]="port.type === 'input'"
+    [class.port-output]="port.type === 'output'"
+    [attr.cx]="pos.x"
+    [attr.cy]="pos.y"
+    [attr.r]="6"
+    [attr.data-port-id]="port.id"
+    [attr.data-port-type]="port.type"
+    [attr.data-node-id]="node().id"
+    (pointerdown)="onPortPointerDown(port, $event)"
+  />
+}
