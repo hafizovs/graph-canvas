@@ -11,6 +11,7 @@ import type { Node, Port } from '../../../../graph-core';
 export interface NodePointerEvent {
   node: Node;
   event: PointerEvent;
+  shiftKey: boolean;
 }
 
 export interface PortPointerEvent {
@@ -50,15 +51,15 @@ export class GraphNodeComponent {
 
   protected onNodePointerDown(event: PointerEvent): void {
     if ((event.target as Element).closest('[data-port-id]')) return;
-    this.nodePointerDown.emit({ node: this.node(), event });
+    this.nodePointerDown.emit({ node: this.node(), event, shiftKey: event.shiftKey });
   }
 
   protected onNodePointerMove(event: PointerEvent): void {
-    this.nodePointerMove.emit({ node: this.node(), event });
+    this.nodePointerMove.emit({ node: this.node(), event, shiftKey: event.shiftKey });
   }
 
   protected onNodePointerUp(event: PointerEvent): void {
-    this.nodePointerUp.emit({ node: this.node(), event });
+    this.nodePointerUp.emit({ node: this.node(), event, shiftKey: event.shiftKey });
   }
 
   protected onPortPointerDown(port: Port, event: PointerEvent): void {

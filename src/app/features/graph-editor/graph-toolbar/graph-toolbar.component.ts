@@ -4,6 +4,13 @@ import {
   input,
   output,
 } from '@angular/core';
+import type { DiagramJson } from '../../../../graph-core';
+import {
+  MOCK_DIAGRAM_EMPTY,
+  MOCK_DIAGRAM_SINGLE_NODE,
+  MOCK_DIAGRAM_CHAIN,
+  MOCK_DIAGRAM_DIAMOND,
+} from '../../../../graph-core';
 
 @Component({
   selector: 'app-graph-toolbar',
@@ -18,6 +25,10 @@ export class GraphToolbarComponent {
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
+  readonly loadExample = output<DiagramJson>();
+  readonly saveRequest = output<void>();
+  readonly loadFromFile = output<DiagramJson>();
+  readonly loadFromStorage = output<void>();
 
   protected onAddNode(): void {
     this.addNode.emit();
@@ -25,5 +36,45 @@ export class GraphToolbarComponent {
 
   protected onDeleteSelection(): void {
     this.deleteSelection.emit();
+  }
+
+  protected onLoadExample(json: DiagramJson): void {
+    this.loadExample.emit(json);
+  }
+
+  protected readonly exampleEmpty = MOCK_DIAGRAM_EMPTY;
+  protected readonly exampleSingle = MOCK_DIAGRAM_SINGLE_NODE;
+  protected readonly exampleChain = MOCK_DIAGRAM_CHAIN;
+  protected readonly exampleDiamond = MOCK_DIAGRAM_DIAMOND;
+
+  protected onSave(): void {
+    this.saveRequest.emit();
+  }
+
+  protected onLoadFromStorage(): void {
+    this.loadFromStorage.emit();
+  }
+
+  protected onLoadFile(fileInput: HTMLInputElement): void {
+    fileInput.click();
+  }
+
+  protected onFileSelected(event: Event, fileInput: HTMLInputElement): void {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const json = JSON.parse(reader.result as string) as DiagramJson;
+        if (json && Array.isArray(json.nodes) && Array.isArray(json.links)) {
+          this.loadFromFile.emit(json);
+        }
+      } catch {
+        // ignore invalid JSON
+      }
+      fileInput.value = '';
+    };
+    reader.readAsText(file);
   }
 }

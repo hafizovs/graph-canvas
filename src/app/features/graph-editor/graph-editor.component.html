@@ -7,6 +7,10 @@
   <app-graph-toolbar
     (addNode)="onAddNode()"
     (deleteSelection)="onDeleteSelection()"
+    (loadExample)="onLoadExample($event)"
+    (saveRequest)="onSave()"
+    (loadFromFile)="onLoadFromFile($event)"
+    (loadFromStorage)="onLoadFromStorage()"
     [hasSelection]="hasSelection()"
   />
 
@@ -25,8 +29,8 @@
               app-graph-link
               [link]="link"
               [diagram]="diagram()!"
-              [selected]="selectedLinkId() === link.id"
-              (linkClick)="onLinkSelect(link)"
+              [selected]="selectedLinkIds().has(link.id)"
+              (linkClick)="onLinkSelect($event)"
             ></g>
           }
           @if (linkingFrom() && linkingPreviewPoint()) {
@@ -47,7 +51,7 @@
             <g
               app-graph-node
               [node]="node"
-              [selected]="selectedNodeId() === node.id"
+              [selected]="selectedNodeIds().has(node.id)"
               (nodePointerDown)="onNodePointerDown($event)"
               (nodePointerMove)="onNodePointerMove($event)"
               (nodePointerUp)="onNodePointerUp($event)"

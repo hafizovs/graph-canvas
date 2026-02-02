@@ -27,4 +27,35 @@
     </svg>
     <span>Delete</span>
   </button>
+  <span class="toolbar-sep" aria-hidden="true"></span>
+  <span class="toolbar-label">Examples:</span>
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleEmpty)" title="Empty diagram">
+    Empty
+  </button>
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleSingle)" title="Single node">
+    Single
+  </button>
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleChain)" title="Chain A→B→C">
+    Chain
+  </button>
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleDiamond)" title="Diamond">
+    Diamond
+  </button>
+  <span class="toolbar-sep" aria-hidden="true"></span>
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onSave()" title="Save to file and storage">
+    Save
+  </button>
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFile(fileInput)" title="Load from file">
+    Load file
+  </button>
+  <input
+    #fileInput
+    type="file"
+    accept=".json,application/json"
+    class="toolbar-file-input"
+    (change)="onFileSelected($event, fileInput)"
+  />
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFromStorage()" title="Load from storage">
+    Load storage
+  </button>
 </div>

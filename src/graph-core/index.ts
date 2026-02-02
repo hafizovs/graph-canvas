@@ -4,3 +4,15 @@ export * from './port';
 export * from './node';
 export * from './link';
 export * from './diagram';
+export type { DiagramJson, NodeDto, PortDto, LinkDto } from './serialization';
+export {
+  serializeDiagram,
+  deserializeDiagram,
+  cloneDiagramJsonForPaste,
+} from './serialization';
+export {
+  MOCK_DIAGRAM_EMPTY,
+  MOCK_DIAGRAM_SINGLE_NODE,
+  MOCK_DIAGRAM_CHAIN,
+  MOCK_DIAGRAM_DIAMOND,
+} from './mocks/diagram-mocks';

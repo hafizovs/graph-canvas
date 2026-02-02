@@ -36,3 +36,24 @@
 .icon {
   flex-shrink: 0;
 }
+
+.toolbar-sep {
+  width: 1px;
+  height: 1.25rem;
+  background: var(--toolbar-border, #ddd);
+  margin: 0 0.25rem;
+}
+
+.toolbar-label {
+  font-size: 0.75rem;
+  color: var(--toolbar-label-color, #666);
+  margin-right: 0.25rem;
+}
+
+.toolbar-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}

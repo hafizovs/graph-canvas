@@ -22,7 +22,7 @@ export class GraphLinkComponent {
   readonly previewTarget = input<PointLike | null>(null);
   readonly selected = input<boolean>(false);
 
-  readonly linkClick = output<Link>();
+  readonly linkClick = output<{ link: Link; shiftKey: boolean }>();
 
   protected readonly pathD = computed(() => {
     const linkVal = this.link();
@@ -40,6 +40,6 @@ export class GraphLinkComponent {
 
   protected onLinkClick(event: MouseEvent): void {
     event.stopPropagation();
-    this.linkClick.emit(this.link());
+    this.linkClick.emit({ link: this.link(), shiftKey: event.shiftKey });
   }
 }
