@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "dtps-graph-editor": {
+    "graph-canvas": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {

@@ -1,6 +1,6 @@
-# DtpsGraphEditor
+# Graph Canvas
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.2.
+Angular 21 graph editor (Canvas + HTML hybrid). Generated with [Angular CLI](https://github.com/angular/angular-cli) version 21.1.2.
 
 ## Development server
 
