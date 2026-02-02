@@ -6,6 +6,7 @@
   }
 }
 
+.node-shape,
 .node-rect {
   fill: var(--node-fill, #fff);
   stroke: var(--node-stroke, #333);

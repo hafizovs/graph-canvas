@@ -1,0 +1,49 @@
+<div class="palette">
+  <h3 class="palette-title">Shapes</h3>
+  <div class="palette-items">
+    @for (item of shapes; track item.shape) {
+      <button
+        type="button"
+        class="palette-item"
+        (pointerdown)="onPointerDown(item.shape, $event)"
+        [attr.title]="'Drag to canvas: ' + item.label"
+      >
+        <svg class="palette-preview" viewBox="0 0 36 28" width="36" height="28">
+          @switch (item.shape) {
+            @case ('roundedRect') {
+              <rect x="2" y="2" width="32" height="24" rx="8" ry="8" fill="currentColor" />
+            }
+            @case ('circle') {
+              <ellipse cx="18" cy="14" rx="14" ry="10" fill="currentColor" />
+            }
+            @case ('ellipse') {
+              <ellipse cx="18" cy="14" rx="16" ry="12" fill="currentColor" />
+            }
+            @case ('diamond') {
+              <polygon points="18,2 34,14 18,26 2,14" fill="currentColor" />
+            }
+            @case ('triangle') {
+              <polygon points="18,2 34,26 2,26" fill="currentColor" />
+            }
+            @case ('hexagon') {
+              <polygon points="18,2 34,7 34,21 18,26 2,21 2,7" fill="currentColor" />
+            }
+            @case ('parallelogram') {
+              <polygon points="7,2 34,2 27,26 0,26" fill="currentColor" />
+            }
+            @case ('pentagon') {
+              <polygon points="18,2 34,11 28,26 8,26 2,11" fill="currentColor" />
+            }
+            @case ('cross') {
+              <path d="M 14 0 L 22 0 L 22 28 L 14 28 Z M 0 11 L 36 11 L 36 17 L 0 17 Z" fill="currentColor" />
+            }
+            @default {
+              <rect x="2" y="2" width="32" height="24" rx="4" ry="4" fill="currentColor" />
+            }
+          }
+        </svg>
+        <span class="palette-label">{{ item.label }}</span>
+      </button>
+    }
+  </div>
+</div>

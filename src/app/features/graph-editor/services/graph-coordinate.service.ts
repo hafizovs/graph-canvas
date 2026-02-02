@@ -1,8 +1,11 @@
 import { Injectable } from '@angular/core';
 
+/** Grid step in SVG units; used for snap and future pathfinding. */
+export const GRID_STEP = 20;
+
 /**
- * Service for converting between screen (client) coordinates and SVG coordinate space.
- * Used by the graph editor for pointer events and drag/link preview.
+ * Service for converting between screen (client) coordinates and SVG coordinate space,
+ * and for snapping coordinates to the grid.
  */
 @Injectable({ providedIn: 'root' })
 export class GraphCoordinateService {
@@ -27,5 +30,15 @@ export class GraphCoordinateService {
     const ctm = svgElement.getScreenCTM();
     const svgP = ctm ? pt.matrixTransform(ctm.inverse()) : pt;
     return { x: svgP.x, y: svgP.y };
+  }
+
+  /**
+   * Snaps a point to the grid. Single source for grid step (pathfinding, snap).
+   */
+  snapToGrid(x: number, y: number): { x: number; y: number } {
+    return {
+      x: Math.round(x / GRID_STEP) * GRID_STEP,
+      y: Math.round(y / GRID_STEP) * GRID_STEP,
+    };
   }
 }

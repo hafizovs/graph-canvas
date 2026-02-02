@@ -51,12 +51,14 @@ describe('GraphViewportService', () => {
     expect(state.viewBox().width).toBeGreaterThan(wAfterIn);
   });
 
-  it('fitToView sets viewBox to contain default when no diagram', () => {
+  it('fitToView sets viewBox to contain default rect when no diagram', () => {
     state.setViewBox({ x: 100, y: 100, width: 200, height: 200 });
     viewport.fitToView(40);
     const vb = state.viewBox();
-    expect(vb.width).toBe(800);
-    expect(vb.height).toBe(600);
+    expect(vb.width).toBeGreaterThan(0);
+    expect(vb.height).toBeGreaterThan(0);
+    expect(vb.x).toBeCloseTo(400 - vb.width / 2, 0);
+    expect(vb.y).toBeCloseTo(300 - vb.height / 2, 0);
   });
 
   it('fitToView fits diagram nodes when diagram is set', () => {

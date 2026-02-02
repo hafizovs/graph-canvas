@@ -9,9 +9,10 @@ import {
   cloneDiagramJsonForPaste,
 } from '../../../../graph-core';
 import type { DiagramJson } from '../../../../graph-core';
-import type { NodeId, PortId } from '../../../../graph-core';
+import type { NodeId, NodeShape, PortId } from '../../../../graph-core';
 import { GraphEditorStateService } from './graph-editor-state.service';
 import { GraphUndoRedoService } from './graph-undo-redo.service';
+import { GraphCoordinateService } from './graph-coordinate.service';
 
 const PASTE_OFFSET = 20;
 
@@ -24,7 +25,8 @@ const PASTE_OFFSET = 20;
 export class GraphOperationsService {
   constructor(
     private state: GraphEditorStateService,
-    private undoRedo: GraphUndoRedoService
+    private undoRedo: GraphUndoRedoService,
+    private coordinate: GraphCoordinateService
   ) {}
 
   /**
@@ -38,8 +40,9 @@ export class GraphOperationsService {
 
     const nodeId = `n${this.state.incrementNodeIdCounter()}` as NodeId;
     const vb = this.state.viewBox();
-    const x = vb.x + vb.width / 2 - 60;
-    const y = vb.y + vb.height / 2 - 30;
+    const centerX = vb.x + vb.width / 2 - 60;
+    const centerY = vb.y + vb.height / 2 - 30;
+    const { x, y } = this.coordinate.snapToGrid(centerX, centerY);
 
     const node = new Node({
       id: nodeId,
@@ -48,6 +51,50 @@ export class GraphOperationsService {
       width: 120,
       height: 60,
       label: `Node ${this.state.getNodeIdCounter()}`,
+      ports: [],
+    });
+    node.addPort(
+      new Port({
+        id: `${nodeId}-in` as PortId,
+        nodeId,
+        side: 'left',
+        offset: 30,
+        type: 'input',
+      })
+    );
+    node.addPort(
+      new Port({
+        id: `${nodeId}-out` as PortId,
+        nodeId,
+        side: 'right',
+        offset: 30,
+        type: 'output',
+      })
+    );
+
+    d.addNode(node);
+    this.state.setDiagram(d, true);
+  }
+
+  /**
+   * Add a new node from the palette at the given SVG coordinates (snapped to grid).
+   * Pushes undo state before adding.
+   */
+  addNodeFromPalette(shape: NodeShape, svgX: number, svgY: number): void {
+    const d = this.state.getDiagram();
+    if (!d) return;
+    this.undoRedo.pushState();
+
+    const { x, y } = this.coordinate.snapToGrid(svgX, svgY);
+    const nodeId = `n${this.state.incrementNodeIdCounter()}` as NodeId;
+    const node = new Node({
+      id: nodeId,
+      x,
+      y,
+      width: 120,
+      height: 60,
+      label: `Node ${this.state.getNodeIdCounter()}`,
+      shape,
       ports: [],
     });
     node.addPort(
@@ -85,7 +132,10 @@ export class GraphOperationsService {
     if (!d) return;
     for (const [nodeId, pos] of initialPositions) {
       const n = d.getNode(nodeId);
-      if (n) n.setPosition(pos.x + dx, pos.y + dy);
+      if (n) {
+        const snapped = this.coordinate.snapToGrid(pos.x + dx, pos.y + dy);
+        n.setPosition(snapped.x, snapped.y);
+      }
     }
     this.state.incrementRenderTick();
   }
@@ -191,6 +241,8 @@ export class GraphOperationsService {
     );
     const pasted = deserializeDiagram(json);
     for (const node of pasted.nodes) {
+      const snapped = this.coordinate.snapToGrid(node.x, node.y);
+      node.setPosition(snapped.x, snapped.y);
       d.addNode(node);
       const m = /^n(\d+)$/.exec(node.id);
       if (m)

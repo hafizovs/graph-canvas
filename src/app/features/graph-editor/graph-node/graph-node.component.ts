@@ -81,4 +81,45 @@ export class GraphNodeComponent {
     const pos = port.getAbsolutePosition(node.getRect());
     return { x: pos.x - node.x, y: pos.y - node.y };
   }
+
+  protected getDiamondPoints(): string {
+    const w = this.node().width;
+    const h = this.node().height;
+    return `${w / 2},0 ${w},${h / 2} ${w / 2},${h} 0,${h / 2}`;
+  }
+
+  protected getTrianglePoints(): string {
+    const w = this.node().width;
+    const h = this.node().height;
+    return `${w / 2},0 ${w},${h} 0,${h}`;
+  }
+
+  protected getHexagonPoints(): string {
+    const w = this.node().width;
+    const h = this.node().height;
+    return `${w / 2},0 ${w},${h / 4} ${w},${(3 * h) / 4} ${w / 2},${h} 0,${(3 * h) / 4} 0,${h / 4}`;
+  }
+
+  protected getParallelogramPoints(): string {
+    const w = this.node().width;
+    const h = this.node().height;
+    const s = w * 0.2;
+    return `${s},0 ${w},0 ${w - s},${h} 0,${h}`;
+  }
+
+  protected getPentagonPoints(): string {
+    const w = this.node().width;
+    const h = this.node().height;
+    return `${w / 2},0 ${w},${h * 0.4} ${w * 0.8},${h} ${w * 0.2},${h} 0,${h * 0.4}`;
+  }
+
+  protected getCrossPath(): string {
+    const w = this.node().width;
+    const h = this.node().height;
+    const vx1 = w * 0.4;
+    const vx2 = w * 0.6;
+    const hy1 = h * 0.4;
+    const hy2 = h * 0.6;
+    return `M ${vx1} 0 L ${vx2} 0 L ${vx2} ${h} L ${vx1} ${h} Z M 0 ${hy1} L ${w} ${hy1} L ${w} ${hy2} L 0 ${hy2} Z`;
+  }
 }

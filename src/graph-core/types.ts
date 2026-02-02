@@ -30,3 +30,16 @@ export type PortSide = 'top' | 'right' | 'bottom' | 'left';
 
 /** Port direction: input (incoming links) or output (outgoing links). */
 export type PortType = 'input' | 'output';
+
+/** Geometric shape of a node for rendering. */
+export type NodeShape =
+  | 'rectangle'
+  | 'roundedRect'
+  | 'circle'
+  | 'ellipse'
+  | 'diamond'
+  | 'triangle'
+  | 'hexagon'
+  | 'parallelogram'
+  | 'pentagon'
+  | 'cross';

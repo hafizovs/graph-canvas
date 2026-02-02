@@ -14,9 +14,30 @@
   background: var(--editor-bg, #f5f5f5);
 }
 
+.editor-main {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+
+  &.palette-dragging {
+    cursor: grabbing;
+  }
+
+  &.palette-drop-over-canvas {
+    cursor: copy;
+  }
+
+  &.palette-dragging:not(.palette-drop-over-canvas) {
+    cursor: no-drop;
+  }
+}
+
 .canvas-wrapper {
   flex: 1;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
 }
 
@@ -36,4 +57,14 @@
 
 .link-preview-path {
   pointer-events: none;
+}
+
+.palette-drop-preview {
+  pointer-events: none;
+
+  .preview-shape {
+    fill: var(--node-fill, rgba(255, 255, 255, 0.7));
+    stroke: var(--node-stroke, #333);
+    stroke-width: 2;
+  }
 }

@@ -1,5 +1,5 @@
 import { Port } from './port';
-import type { NodeId, PortId, PointLike } from './types';
+import type { NodeId, NodeShape, PortId, PointLike } from './types';
 import type { Rect } from './types';
 
 /** Configuration for creating a Node. */
@@ -10,6 +10,7 @@ export interface NodeConfig {
   width?: number;
   height?: number;
   label?: string;
+  shape?: NodeShape;
   ports?: Port[];
 }
 
@@ -23,6 +24,7 @@ export class Node implements NodeConfig {
   width: number;
   height: number;
   label: string;
+  shape: NodeShape;
   private _ports: Map<PortId, Port> = new Map();
 
   constructor(config: NodeConfig) {
@@ -32,6 +34,7 @@ export class Node implements NodeConfig {
     this.width = config.width ?? 120;
     this.height = config.height ?? 60;
     this.label = config.label ?? '';
+    this.shape = config.shape ?? 'rectangle';
     for (const p of config.ports ?? []) {
       this._ports.set(p.id, p);
     }

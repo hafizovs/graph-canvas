@@ -1,4 +1,4 @@
-import type { PortSide, PortType } from './types';
+import type { NodeShape, PortSide, PortType } from './types';
 import { Diagram } from './diagram';
 import { Node } from './node';
 import { Link } from './link';
@@ -22,6 +22,7 @@ export interface NodeDto {
   width?: number;
   height?: number;
   label?: string;
+  shape?: NodeShape;
   ports: PortDto[];
 }
 
@@ -52,6 +53,7 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
     width: node.width,
     height: node.height,
     label: node.label,
+    shape: node.shape,
     ports: node.ports.map((p) => ({
       id: p.id,
       nodeId: p.nodeId,
@@ -102,6 +104,7 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
       width: nd.width,
       height: nd.height,
       label: nd.label,
+      shape: nd.shape,
       ports,
     });
     diagram.addNode(node);

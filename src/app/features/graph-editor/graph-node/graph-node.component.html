@@ -1,11 +1,87 @@
-<svg:rect
-  class="node-rect"
-  [class.node-selected]="selected()"
-  [attr.width]="node().width"
-  [attr.height]="node().height"
-  rx="6"
-  ry="6"
-/>
+@switch (node().shape) {
+  @case ('roundedRect') {
+    <svg:rect
+      class="node-shape node-rounded-rect"
+      [class.node-selected]="selected()"
+      [attr.width]="node().width"
+      [attr.height]="node().height"
+      [attr.rx]="node().width / 4"
+      [attr.ry]="node().height / 4"
+    />
+  }
+  @case ('circle') {
+    <svg:ellipse
+      class="node-shape node-circle"
+      [class.node-selected]="selected()"
+      [attr.cx]="node().width / 2"
+      [attr.cy]="node().height / 2"
+      [attr.rx]="node().width / 2"
+      [attr.ry]="node().height / 2"
+    />
+  }
+  @case ('ellipse') {
+    <svg:ellipse
+      class="node-shape node-ellipse"
+      [class.node-selected]="selected()"
+      [attr.cx]="node().width / 2"
+      [attr.cy]="node().height / 2"
+      [attr.rx]="node().width / 2"
+      [attr.ry]="node().height / 2"
+    />
+  }
+  @case ('diamond') {
+    <svg:polygon
+      class="node-shape node-diamond"
+      [class.node-selected]="selected()"
+      [attr.points]="getDiamondPoints()"
+    />
+  }
+  @case ('triangle') {
+    <svg:polygon
+      class="node-shape node-triangle"
+      [class.node-selected]="selected()"
+      [attr.points]="getTrianglePoints()"
+    />
+  }
+  @case ('hexagon') {
+    <svg:polygon
+      class="node-shape node-hexagon"
+      [class.node-selected]="selected()"
+      [attr.points]="getHexagonPoints()"
+    />
+  }
+  @case ('parallelogram') {
+    <svg:polygon
+      class="node-shape node-parallelogram"
+      [class.node-selected]="selected()"
+      [attr.points]="getParallelogramPoints()"
+    />
+  }
+  @case ('pentagon') {
+    <svg:polygon
+      class="node-shape node-pentagon"
+      [class.node-selected]="selected()"
+      [attr.points]="getPentagonPoints()"
+    />
+  }
+  @case ('cross') {
+    <svg:path
+      class="node-shape node-cross"
+      [class.node-selected]="selected()"
+      [attr.d]="getCrossPath()"
+    />
+  }
+  @default {
+    <svg:rect
+      class="node-shape node-rect"
+      [class.node-selected]="selected()"
+      [attr.width]="node().width"
+      [attr.height]="node().height"
+      rx="6"
+      ry="6"
+    />
+  }
+}
 <svg:text
   class="node-label"
   [attr.x]="node().width / 2"

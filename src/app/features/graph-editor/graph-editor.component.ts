@@ -7,11 +7,14 @@ import {
   ElementRef,
   HostListener,
   inject,
+  signal,
 } from '@angular/core';
 import type { DiagramJson } from '../../../graph-core';
 import { MOCK_DIAGRAM_CHAIN } from '../../../graph-core';
+import type { NodeShape } from '../../../graph-core';
 import { GraphLinkComponent } from './graph-link/graph-link.component';
 import { GraphNodeComponent } from './graph-node/graph-node.component';
+import { GraphPaletteComponent } from './graph-palette/graph-palette.component';
 import { GraphToolbarComponent } from './graph-toolbar/graph-toolbar.component';
 import type { NodePointerEvent } from './graph-node/graph-node.component';
 import type { PortPointerEvent } from './graph-node/graph-node.component';
@@ -20,7 +23,7 @@ import type { NodeId, PortId } from '../../../graph-core';
 import { GraphEditorStateService } from './services/graph-editor-state.service';
 import { GraphUndoRedoService } from './services/graph-undo-redo.service';
 import { GraphOperationsService } from './services/graph-operations.service';
-import { GraphCoordinateService } from './services/graph-coordinate.service';
+import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
 import { serializeDiagram } from '../../../graph-core';
 
@@ -32,7 +35,7 @@ import { serializeDiagram } from '../../../graph-core';
   selector: 'app-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GraphLinkComponent, GraphNodeComponent, GraphToolbarComponent],
+  imports: [GraphLinkComponent, GraphNodeComponent, GraphPaletteComponent, GraphToolbarComponent],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
 })
@@ -54,6 +57,13 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected readonly selectedLinkIds = this.state.selectedLinkIds;
   protected readonly selectionRect = this.state.selectionRect;
   protected readonly hasSelection = this.state.hasSelection;
+  protected readonly gridStep = GRID_STEP;
+
+  protected readonly draggingFromPalette = signal<{ shape: NodeShape; pointerId: number } | null>(null);
+  protected readonly paletteDropPreview = signal<{ x: number; y: number; shape: NodeShape } | null>(null);
+
+  private _palettePointerMove = (e: PointerEvent) => this.onPalettePointerMove(e);
+  private _palettePointerUp = (e: PointerEvent) => this.onPalettePointerUp(e);
 
   private _spaceKey = false;
   private _panning: { startClientX: number; startClientY: number; startViewBoxX: number; startViewBoxY: number; pointerId: number; target: Element } | null = null;
@@ -141,6 +151,41 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Add a new node at view center (undoable). */
   protected onAddNode(): void {
     this.operations.addNode();
+  }
+
+  /** Start drag from palette; capture pointer and listen for move/up on document. */
+  protected onPaletteShapeDragStart(payload: { shape: NodeShape; pointerId: number }): void {
+    this.draggingFromPalette.set({ shape: payload.shape, pointerId: payload.pointerId });
+    document.addEventListener('pointermove', this._palettePointerMove);
+    document.addEventListener('pointerup', this._palettePointerUp);
+  }
+
+  private onPalettePointerMove(event: PointerEvent): void {
+    const drag = this.draggingFromPalette();
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const svg = this.svgContainer?.nativeElement;
+    const under = document.elementFromPoint(event.clientX, event.clientY);
+    const overCanvas = svg && (under === svg || svg.contains(under));
+    if (overCanvas && svg) {
+      const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+      const snapped = this.coordinate.snapToGrid(pt.x, pt.y);
+      this.paletteDropPreview.set({ x: snapped.x, y: snapped.y, shape: drag.shape });
+    } else {
+      this.paletteDropPreview.set(null);
+    }
+  }
+
+  private onPalettePointerUp(event: PointerEvent): void {
+    const drag = this.draggingFromPalette();
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    document.removeEventListener('pointermove', this._palettePointerMove);
+    document.removeEventListener('pointerup', this._palettePointerUp);
+    const preview = this.paletteDropPreview();
+    if (preview) {
+      this.operations.addNodeFromPalette(preview.shape, preview.x, preview.y);
+    }
+    this.draggingFromPalette.set(null);
+    this.paletteDropPreview.set(null);
   }
 
   /** Start pending drag or capture pointer for click. */
@@ -491,5 +536,29 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onZoomToSelection(): void {
     const { width, height } = this.getContainerSize();
     this.viewport.zoomToSelection(40, width, height);
+  }
+
+  protected getPreviewDiamondPoints(): string {
+    return '60,0 120,30 60,60 0,30';
+  }
+
+  protected getPreviewTrianglePoints(): string {
+    return '60,0 120,60 0,60';
+  }
+
+  protected getPreviewHexagonPoints(): string {
+    return '60,0 120,15 120,45 60,60 0,45 0,15';
+  }
+
+  protected getPreviewParallelogramPoints(): string {
+    return '24,0 120,0 96,60 0,60';
+  }
+
+  protected getPreviewPentagonPoints(): string {
+    return '60,0 120,24 96,60 24,60 0,24';
+  }
+
+  protected getPreviewCrossPath(): string {
+    return 'M 48 0 L 72 0 L 72 60 L 48 60 Z M 0 24 L 120 24 L 120 36 L 0 36 Z';
   }
 }
