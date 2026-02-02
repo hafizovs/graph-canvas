@@ -23,6 +23,7 @@ import {
 export class GraphToolbarComponent {
   readonly disabled = input<boolean>(false);
   readonly hasSelection = input<boolean>(false);
+  readonly snapToGridEnabled = input<boolean>(true);
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
@@ -30,6 +31,7 @@ export class GraphToolbarComponent {
   readonly zoomOut = output<void>();
   readonly fitToView = output<void>();
   readonly zoomToSelection = output<void>();
+  readonly snapToGridToggle = output<void>();
   readonly loadExample = output<DiagramJson>();
   readonly saveRequest = output<void>();
   readonly loadFromFile = output<DiagramJson>();
@@ -59,6 +61,10 @@ export class GraphToolbarComponent {
 
   protected onZoomToSelection(): void {
     this.zoomToSelection.emit();
+  }
+
+  protected onSnapToGridToggle(): void {
+    this.snapToGridToggle.emit();
   }
 
   /** Emit loadExample with selected diagram JSON. */

@@ -32,7 +32,8 @@ describe('GraphOperationsService', () => {
     expect(state.getDiagram()!.links.length).toBe(0);
   });
 
-  it('moveNodes applies delta and snaps to grid', () => {
+  it('moveNodes applies delta and snaps to grid when snap enabled', () => {
+    state.setSnapToGridEnabled(true);
     const d = state.getDiagram()!;
     const initialPositions = new Map([
       ['n1', { x: d.getNode('n1')!.x, y: d.getNode('n1')!.y }],
@@ -47,6 +48,19 @@ describe('GraphOperationsService', () => {
     const snappedY = Math.round(rawY / 20) * 20;
     expect(n1.x).toBe(snappedX);
     expect(n1.y).toBe(snappedY);
+  });
+
+  it('moveNodes does not snap when snapToGrid is disabled', () => {
+    state.setSnapToGridEnabled(false);
+    const d = state.getDiagram()!;
+    const initialPositions = new Map([
+      ['n1', { x: 55, y: 73 }],
+    ]);
+    d.getNode('n1')!.setPosition(55, 73);
+    operations.moveNodes(initialPositions, 7, 11);
+    const n1 = d.getNode('n1')!;
+    expect(n1.x).toBe(62);
+    expect(n1.y).toBe(84);
   });
 
   it('createLink adds link when target is free', () => {

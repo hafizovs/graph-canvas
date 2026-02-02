@@ -7,7 +7,9 @@ import {
   ElementRef,
   HostListener,
   inject,
+  input,
   signal,
+  effect,
 } from '@angular/core';
 import type { DiagramJson } from '../../../graph-core';
 import { MOCK_DIAGRAM_CHAIN } from '../../../graph-core';
@@ -58,6 +60,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected readonly selectionRect = this.state.selectionRect;
   protected readonly hasSelection = this.state.hasSelection;
   protected readonly gridStep = GRID_STEP;
+  protected readonly snapToGridEnabled = this.state.snapToGridEnabled;
+
+  /** Initial snap-to-grid from config (input). */
+  readonly snapToGrid = input<boolean>(true);
 
   protected readonly draggingFromPalette = signal<{ shape: NodeShape; pointerId: number } | null>(null);
   protected readonly paletteDropPreview = signal<{ x: number; y: number; shape: NodeShape } | null>(null);
@@ -81,6 +87,12 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   private static readonly STORAGE_KEY = 'graph-canvas-diagram';
 
   private _wheelHandler = (event: WheelEvent) => this.onCanvasWheel(event);
+
+  constructor() {
+    effect(() => {
+      this.state.setSnapToGridEnabled(this.snapToGrid());
+    });
+  }
 
   /** Load example diagram on init; attach wheel zoom (non-passive so preventDefault works). */
   ngAfterViewInit(): void {
@@ -153,6 +165,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.operations.addNode();
   }
 
+  /** Toggle snap-to-grid (toolbar button). */
+  protected onSnapToGridToggle(): void {
+    this.state.toggleSnapToGrid();
+  }
+
   /** Start drag from palette; capture pointer and listen for move/up on document. */
   protected onPaletteShapeDragStart(payload: { shape: NodeShape; pointerId: number }): void {
     this.draggingFromPalette.set({ shape: payload.shape, pointerId: payload.pointerId });
@@ -168,8 +185,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     const overCanvas = svg && (under === svg || svg.contains(under));
     if (overCanvas && svg) {
       const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
-      const snapped = this.coordinate.snapToGrid(pt.x, pt.y);
-      this.paletteDropPreview.set({ x: snapped.x, y: snapped.y, shape: drag.shape });
+      const { x, y } = this.state.snapToGridEnabled()
+        ? this.coordinate.snapToGrid(pt.x, pt.y)
+        : { x: pt.x, y: pt.y };
+      this.paletteDropPreview.set({ x, y, shape: drag.shape });
     } else {
       this.paletteDropPreview.set(null);
     }

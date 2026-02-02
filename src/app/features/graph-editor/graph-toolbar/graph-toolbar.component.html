@@ -84,6 +84,22 @@
     </svg>
     <span>Zoom to selection</span>
   </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [class.toolbar-btn-active]="snapToGridEnabled()"
+    [attr.aria-pressed]="snapToGridEnabled()"
+    (click)="onSnapToGridToggle()"
+    title="Snap to grid"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="14" y="14" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+    </svg>
+    <span>Snap to grid</span>
+  </button>
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Examples:</span>
   <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleEmpty)" title="Empty diagram">

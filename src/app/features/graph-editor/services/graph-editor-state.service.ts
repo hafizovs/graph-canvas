@@ -45,6 +45,19 @@ export class GraphEditorStateService {
       this.selectedNodeIds().size > 0 || this.selectedLinkIds().size > 0
   );
 
+  /** When true, node positions snap to grid (add, move, paste, palette drop). */
+  readonly snapToGridEnabled = signal(true);
+
+  /** Set snap-to-grid on or off. */
+  setSnapToGridEnabled(value: boolean): void {
+    this.snapToGridEnabled.set(value);
+  }
+
+  /** Toggle snap-to-grid (for toolbar button). */
+  toggleSnapToGrid(): void {
+    this.snapToGridEnabled.update((v) => !v);
+  }
+
   private _nodeIdCounter = 0;
   private _linkIdCounter = 0;
   private _clipboard: DiagramJson | null = null;

@@ -62,6 +62,18 @@ describe('GraphEditorStateService', () => {
     expect(vb.height).toBe(300);
   });
 
+  it('setSnapToGridEnabled and toggleSnapToGrid update snapToGridEnabled', () => {
+    expect(service.snapToGridEnabled()).toBe(true);
+    service.setSnapToGridEnabled(false);
+    expect(service.snapToGridEnabled()).toBe(false);
+    service.setSnapToGridEnabled(true);
+    expect(service.snapToGridEnabled()).toBe(true);
+    service.toggleSnapToGrid();
+    expect(service.snapToGridEnabled()).toBe(false);
+    service.toggleSnapToGrid();
+    expect(service.snapToGridEnabled()).toBe(true);
+  });
+
   it('selectNodesInRect selects nodes intersecting rect and clears selectionRect', () => {
     service.setDiagramFromJson(MOCK_DIAGRAM_CHAIN);
     const d = service.getDiagram()!;

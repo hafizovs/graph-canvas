@@ -42,7 +42,9 @@ export class GraphOperationsService {
     const vb = this.state.viewBox();
     const centerX = vb.x + vb.width / 2 - 60;
     const centerY = vb.y + vb.height / 2 - 30;
-    const { x, y } = this.coordinate.snapToGrid(centerX, centerY);
+    const { x, y } = this.state.snapToGridEnabled()
+      ? this.coordinate.snapToGrid(centerX, centerY)
+      : { x: centerX, y: centerY };
 
     const node = new Node({
       id: nodeId,
@@ -85,7 +87,9 @@ export class GraphOperationsService {
     if (!d) return;
     this.undoRedo.pushState();
 
-    const { x, y } = this.coordinate.snapToGrid(svgX, svgY);
+    const { x, y } = this.state.snapToGridEnabled()
+      ? this.coordinate.snapToGrid(svgX, svgY)
+      : { x: svgX, y: svgY };
     const nodeId = `n${this.state.incrementNodeIdCounter()}` as NodeId;
     const node = new Node({
       id: nodeId,
@@ -133,8 +137,12 @@ export class GraphOperationsService {
     for (const [nodeId, pos] of initialPositions) {
       const n = d.getNode(nodeId);
       if (n) {
-        const snapped = this.coordinate.snapToGrid(pos.x + dx, pos.y + dy);
-        n.setPosition(snapped.x, snapped.y);
+        const newX = pos.x + dx;
+        const newY = pos.y + dy;
+        const { x, y } = this.state.snapToGridEnabled()
+          ? this.coordinate.snapToGrid(newX, newY)
+          : { x: newX, y: newY };
+        n.setPosition(x, y);
       }
     }
     this.state.incrementRenderTick();
@@ -241,8 +249,10 @@ export class GraphOperationsService {
     );
     const pasted = deserializeDiagram(json);
     for (const node of pasted.nodes) {
-      const snapped = this.coordinate.snapToGrid(node.x, node.y);
-      node.setPosition(snapped.x, snapped.y);
+      if (this.state.snapToGridEnabled()) {
+        const snapped = this.coordinate.snapToGrid(node.x, node.y);
+        node.setPosition(snapped.x, snapped.y);
+      }
       d.addNode(node);
       const m = /^n(\d+)$/.exec(node.id);
       if (m)

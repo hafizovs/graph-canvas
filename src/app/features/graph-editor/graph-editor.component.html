@@ -11,11 +11,13 @@
     (zoomOut)="onZoomOut()"
     (fitToView)="onFitToView()"
     (zoomToSelection)="onZoomToSelection()"
+    (snapToGridToggle)="onSnapToGridToggle()"
     (loadExample)="onLoadExample($event)"
     (saveRequest)="onSave()"
     (loadFromFile)="onLoadFromFile($event)"
     (loadFromStorage)="onLoadFromStorage()"
     [hasSelection]="hasSelection()"
+    [snapToGridEnabled]="snapToGridEnabled()"
   />
 
   <div
@@ -52,14 +54,16 @@
         </pattern>
       </defs>
       <g class="graph-content">
-        <rect
-          class="grid-layer"
-          [attr.x]="viewBox().x - gridStep"
-          [attr.y]="viewBox().y - gridStep"
-          [attr.width]="viewBox().width + gridStep * 2"
-          [attr.height]="viewBox().height + gridStep * 2"
-          fill="url(#grid-pattern)"
-        />
+        @if (snapToGridEnabled()) {
+          <rect
+            class="grid-layer"
+            [attr.x]="viewBox().x - gridStep"
+            [attr.y]="viewBox().y - gridStep"
+            [attr.width]="viewBox().width + gridStep * 2"
+            [attr.height]="viewBox().height + gridStep * 2"
+            fill="url(#grid-pattern)"
+          />
+        }
         <g class="links-layer">
           @for (link of diagram()?.links ?? []; track link.id) {
             <g
