@@ -1,11 +1,11 @@
-<rect
+<svg:rect
   class="node-rect"
   [attr.width]="node().width"
   [attr.height]="node().height"
   rx="6"
   ry="6"
 />
-<text
+<svg:text
   class="node-label"
   [attr.x]="node().width / 2"
   [attr.y]="node().height / 2"
@@ -13,10 +13,10 @@
   text-anchor="middle"
 >
   {{ node().label }}
-</text>
+</svg:text>
 @for (port of node().ports; track port.id) {
   @let pos = getPortPosition(port);
-  <circle
+  <svg:circle
     class="port"
     [class.port-input]="port.type === 'input'"
     [class.port-output]="port.type === 'output'"
