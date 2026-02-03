@@ -109,11 +109,11 @@ describe('GraphOperationsService', () => {
     expect(n2.rotation).toBe(10);
   });
 
-  it('alignSelectedNodes alignLeft aligns two nodes to left edge', () => {
+  it('alignSelectedNodes alignLeft uses first selected as reference and aligns others', () => {
     const d = state.getDiagram()!;
     const n1 = d.getNode('n1')!;
     const n2 = d.getNode('n2')!;
-    // n1 at (100,100), n2 at (350,100); minX = 100
+    // n1 at (100,100), n2 at (350,100); first selected = n1 = reference
     state.setNodeSelection(new Set(['n1', 'n2']));
     state.setSnapToGridEnabled(false);
     operations.alignSelectedNodes('alignLeft');
@@ -121,7 +121,20 @@ describe('GraphOperationsService', () => {
     expect(n2.x).toBe(100);
   });
 
-  it('alignSelectedNodes alignCenterH centers nodes horizontally', () => {
+  it('alignSelectedNodes reference node does not move', () => {
+    const d = state.getDiagram()!;
+    const n1 = d.getNode('n1')!;
+    const n2 = d.getNode('n2')!;
+    const refX = n1.x;
+    const refY = n1.y;
+    state.setNodeSelection(new Set(['n1', 'n2']));
+    state.setSnapToGridEnabled(false);
+    operations.alignSelectedNodes('alignLeft');
+    expect(n1.x).toBe(refX);
+    expect(n1.y).toBe(refY);
+  });
+
+  it('alignSelectedNodes alignCenterH uses reference center (first selected)', () => {
     const d = state.getDiagram()!;
     const n1 = d.getNode('n1')!;
     const n2 = d.getNode('n2')!;
@@ -131,9 +144,10 @@ describe('GraphOperationsService', () => {
     const cx1 = n1.x + n1.width / 2;
     const cx2 = n2.x + n2.width / 2;
     expect(cx1).toBe(cx2);
+    expect(n1.x).toBe(100);
   });
 
-  it('alignSelectedNodes alignRight aligns two nodes to right edge', () => {
+  it('alignSelectedNodes alignRight aligns others to reference right edge', () => {
     const d = state.getDiagram()!;
     const n1 = d.getNode('n1')!;
     const n2 = d.getNode('n2')!;
@@ -141,9 +155,10 @@ describe('GraphOperationsService', () => {
     state.setSnapToGridEnabled(false);
     operations.alignSelectedNodes('alignRight');
     expect(n1.x + n1.width).toBe(n2.x + n2.width);
+    expect(n1.x).toBe(100);
   });
 
-  it('alignSelectedNodes with snap produces positions divisible by GRID_STEP', () => {
+  it('alignSelectedNodes with snap snaps moved nodes to grid (reference unchanged)', () => {
     const d = state.getDiagram()!;
     d.getNode('n1')!.setPosition(103, 97);
     d.getNode('n2')!.setPosition(348, 98);
@@ -152,10 +167,21 @@ describe('GraphOperationsService', () => {
     operations.alignSelectedNodes('alignLeft');
     const n1 = d.getNode('n1')!;
     const n2 = d.getNode('n2')!;
-    expect(n1.x % GRID_STEP).toBe(0);
-    expect(n1.y % GRID_STEP).toBe(0);
+    expect(n1.x).toBe(103);
+    expect(n1.y).toBe(97);
     expect(n2.x % GRID_STEP).toBe(0);
     expect(n2.y % GRID_STEP).toBe(0);
+  });
+
+  it('alignSelectedNodes alignLeft with order n2 then n1 uses n2 as reference', () => {
+    const d = state.getDiagram()!;
+    const n1 = d.getNode('n1')!;
+    const n2 = d.getNode('n2')!;
+    state.setNodeSelection(new Set(['n2', 'n1']));
+    state.setSnapToGridEnabled(false);
+    operations.alignSelectedNodes('alignLeft');
+    expect(n2.x).toBe(350);
+    expect(n1.x).toBe(350);
   });
 
   it('alignSelectedNodes does nothing when fewer than 2 nodes selected', () => {

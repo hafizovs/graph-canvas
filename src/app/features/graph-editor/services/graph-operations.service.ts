@@ -186,6 +186,7 @@ export class GraphOperationsService {
 
   /**
    * Align or distribute selected nodes by the given mode. Requires ≥2 nodes for align, ≥3 for distribute.
+   * For align modes, the first selected node is the reference (unchanged); others align to it.
    * Pushes undo before applying; uses snap-to-grid when enabled.
    */
   alignSelectedNodes(mode: AlignMode): void {
@@ -193,6 +194,11 @@ export class GraphOperationsService {
     const nodeIds = this.state.selectedNodeIds();
     if (!d || nodeIds.size < 2) return;
     if ((mode === 'distributeH' || mode === 'distributeV') && nodeIds.size < 3) return;
+
+    const orderedIds = Array.from(nodeIds);
+    const refId = orderedIds[0];
+    const ref = d.getNode(refId);
+    if (!ref) return;
 
     const nodes: Node[] = [];
     for (const id of nodeIds) {
@@ -202,21 +208,6 @@ export class GraphOperationsService {
     if (nodes.length < 2) return;
     if ((mode === 'distributeH' || mode === 'distributeV') && nodes.length < 3) return;
 
-    let minX = Infinity;
-    let maxX = -Infinity;
-    let minY = Infinity;
-    let maxY = -Infinity;
-    for (const n of nodes) {
-      const left = n.x;
-      const right = n.x + n.width;
-      const top = n.y;
-      const bottom = n.y + n.height;
-      if (left < minX) minX = left;
-      if (right > maxX) maxX = right;
-      if (top < minY) minY = top;
-      if (bottom > maxY) maxY = bottom;
-    }
-
     const snap = (x: number, y: number) =>
       this.state.snapToGridEnabled()
         ? this.coordinate.snapToGrid(x, y)
@@ -224,63 +215,78 @@ export class GraphOperationsService {
 
     this.undoRedo.pushState();
 
-    if (mode === 'alignLeft') {
+    const isAlignMode =
+      mode === 'alignLeft' ||
+      mode === 'alignCenterH' ||
+      mode === 'alignRight' ||
+      mode === 'alignTop' ||
+      mode === 'alignMiddleV' ||
+      mode === 'alignBottom';
+
+    if (isAlignMode) {
       for (const n of nodes) {
-        const { x, y } = snap(minX, n.y);
-        n.setPosition(x, y);
+        if (n.id === refId) continue;
+        if (mode === 'alignLeft') {
+          const { x, y } = snap(ref.x, n.y);
+          n.setPosition(x, y);
+        } else if (mode === 'alignCenterH') {
+          const newX = ref.x + ref.width / 2 - n.width / 2;
+          const { x, y } = snap(newX, n.y);
+          n.setPosition(x, y);
+        } else if (mode === 'alignRight') {
+          const newX = ref.x + ref.width - n.width;
+          const { x, y } = snap(newX, n.y);
+          n.setPosition(x, y);
+        } else if (mode === 'alignTop') {
+          const { x, y } = snap(n.x, ref.y);
+          n.setPosition(x, y);
+        } else if (mode === 'alignMiddleV') {
+          const newY = ref.y + ref.height / 2 - n.height / 2;
+          const { x, y } = snap(n.x, newY);
+          n.setPosition(x, y);
+        } else if (mode === 'alignBottom') {
+          const newY = ref.y + ref.height - n.height;
+          const { x, y } = snap(n.x, newY);
+          n.setPosition(x, y);
+        }
       }
-    } else if (mode === 'alignCenterH') {
-      const cx = (minX + maxX) / 2;
+    } else {
+      let minX = Infinity;
+      let maxX = -Infinity;
+      let minY = Infinity;
+      let maxY = -Infinity;
       for (const n of nodes) {
-        const newX = cx - n.width / 2;
-        const { x, y } = snap(newX, n.y);
-        n.setPosition(x, y);
+        const left = n.x;
+        const right = n.x + n.width;
+        const top = n.y;
+        const bottom = n.y + n.height;
+        if (left < minX) minX = left;
+        if (right > maxX) maxX = right;
+        if (top < minY) minY = top;
+        if (bottom > maxY) maxY = bottom;
       }
-    } else if (mode === 'alignRight') {
-      for (const n of nodes) {
-        const newX = maxX - n.width;
-        const { x, y } = snap(newX, n.y);
-        n.setPosition(x, y);
-      }
-    } else if (mode === 'alignTop') {
-      for (const n of nodes) {
-        const { x, y } = snap(n.x, minY);
-        n.setPosition(x, y);
-      }
-    } else if (mode === 'alignMiddleV') {
-      const cy = (minY + maxY) / 2;
-      for (const n of nodes) {
-        const newY = cy - n.height / 2;
-        const { x, y } = snap(n.x, newY);
-        n.setPosition(x, y);
-      }
-    } else if (mode === 'alignBottom') {
-      for (const n of nodes) {
-        const newY = maxY - n.height;
-        const { x, y } = snap(n.x, newY);
-        n.setPosition(x, y);
-      }
-    } else if (mode === 'distributeH') {
-      const sorted = [...nodes].sort((a, b) => a.x + a.width / 2 - (b.x + b.width / 2));
-      const totalWidth = sorted.reduce((sum, n) => sum + n.width, 0);
-      const bboxWidth = maxX - minX;
-      const gap = (bboxWidth - totalWidth) / (sorted.length - 1);
-      let x = minX;
-      for (const n of sorted) {
-        const { x: sx, y } = snap(x, n.y);
-        n.setPosition(sx, y);
-        x += n.width + gap;
-      }
-    } else if (mode === 'distributeV') {
-      const sorted = [...nodes].sort((a, b) => a.y + a.height / 2 - (b.y + b.height / 2));
-      const totalHeight = sorted.reduce((sum, n) => sum + n.height, 0);
-      const bboxHeight = maxY - minY;
-      const gap = (bboxHeight - totalHeight) / (sorted.length - 1);
-      let y = minY;
-      for (const n of sorted) {
-        const { x, y: sy } = snap(n.x, y);
-        n.setPosition(x, sy);
-        y += n.height + gap;
+      if (mode === 'distributeH') {
+        const sorted = [...nodes].sort((a, b) => a.x + a.width / 2 - (b.x + b.width / 2));
+        const totalWidth = sorted.reduce((sum, n) => sum + n.width, 0);
+        const bboxWidth = maxX - minX;
+        const gap = (bboxWidth - totalWidth) / (sorted.length - 1);
+        let x = minX;
+        for (const n of sorted) {
+          const { x: sx, y } = snap(x, n.y);
+          n.setPosition(sx, y);
+          x += n.width + gap;
+        }
+      } else if (mode === 'distributeV') {
+        const sorted = [...nodes].sort((a, b) => a.y + a.height / 2 - (b.y + b.height / 2));
+        const totalHeight = sorted.reduce((sum, n) => sum + n.height, 0);
+        const bboxHeight = maxY - minY;
+        const gap = (bboxHeight - totalHeight) / (sorted.length - 1);
+        let y = minY;
+        for (const n of sorted) {
+          const { x, y: sy } = snap(n.x, y);
+          n.setPosition(x, sy);
+          y += n.height + gap;
+        }
       }
     }
 
