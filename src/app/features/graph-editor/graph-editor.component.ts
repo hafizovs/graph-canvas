@@ -21,13 +21,19 @@ import { GraphToolbarComponent } from './graph-toolbar/graph-toolbar.component';
 import type { NodePointerEvent } from './graph-node/graph-node.component';
 import type { PortPointerEvent } from './graph-node/graph-node.component';
 import type { Link, Node } from '../../../graph-core';
-import type { NodeId, PortId } from '../../../graph-core';
+import type { LinkId, NodeId, PortId } from '../../../graph-core';
 import { GraphEditorStateService } from './services/graph-editor-state.service';
 import { GraphUndoRedoService } from './services/graph-undo-redo.service';
 import { GraphOperationsService } from './services/graph-operations.service';
+import { GraphLinkGeometryService } from './services/graph-link-geometry.service';
 import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
 import { serializeDiagram } from '../../../graph-core';
+import type {
+  PathPointerPayload,
+  SegmentMidpointPayload,
+  WaypointPointerPayload,
+} from './graph-link/graph-link.component';
 
 /**
  * Main graph editor container. Coordinates state, undo/redo, operations, and coordinate services.
@@ -47,6 +53,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected readonly state = inject(GraphEditorStateService);
   private readonly undoRedo = inject(GraphUndoRedoService);
   private readonly operations = inject(GraphOperationsService);
+  private readonly linkGeometry = inject(GraphLinkGeometryService);
   private readonly coordinate = inject(GraphCoordinateService);
   private readonly viewport = inject(GraphViewportService);
 
@@ -70,6 +77,35 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   private _palettePointerMove = (e: PointerEvent) => this.onPalettePointerMove(e);
   private _palettePointerUp = (e: PointerEvent) => this.onPalettePointerUp(e);
+  private _waypointPointerMove = (e: PointerEvent) => this.onWaypointPointerMove(e);
+  private _waypointPointerUp = (e: PointerEvent) => this.onWaypointPointerUp(e);
+  private _segmentDragPointerMove = (e: PointerEvent) => this.onSegmentDragPointerMove(e);
+  private _segmentDragPointerUp = (e: PointerEvent) => this.onSegmentDragPointerUp(e);
+
+  private onWaypointPointerMove(event: PointerEvent): void {
+    if (!this._draggingWaypoint || event.pointerId !== this._draggingWaypoint.pointerId) return;
+    if (!this._draggingWaypoint.pushedUndo) {
+      this._draggingWaypoint.pushedUndo = true;
+      this.undoRedo.pushState();
+    }
+    const svg = this.svgContainer?.nativeElement;
+    if (!svg) return;
+    const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+    this.operations.moveLinkWaypoint(
+      this._draggingWaypoint.linkId,
+      this._draggingWaypoint.pointIndex,
+      pt.x,
+      pt.y
+    );
+  }
+
+  private onWaypointPointerUp(event: PointerEvent): void {
+    if (!this._draggingWaypoint || event.pointerId !== this._draggingWaypoint.pointerId) return;
+    this._draggingWaypoint.target.releasePointerCapture?.(this._draggingWaypoint.pointerId);
+    document.removeEventListener('pointermove', this._waypointPointerMove);
+    document.removeEventListener('pointerup', this._waypointPointerUp);
+    this._draggingWaypoint = null;
+  }
 
   private _spaceKey = false;
   private _panning: { startClientX: number; startClientY: number; startViewBoxX: number; startViewBoxY: number; pointerId: number; target: Element } | null = null;
@@ -81,6 +117,20 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     startX: number;
     startY: number;
     initialPositions: Map<NodeId, { x: number; y: number }>;
+  } | null = null;
+  private _draggingWaypoint: {
+    linkId: LinkId;
+    pointIndex: number;
+    pointerId: number;
+    target: Element;
+    pushedUndo: boolean;
+  } | null = null;
+  private _pendingSegmentDrag: {
+    linkId: LinkId;
+    segIdx: number;
+    projected: { x: number; y: number };
+    pointerId: number;
+    target: Element;
   } | null = null;
   private static readonly DRAG_THRESHOLD_PX = 4;
 
@@ -302,7 +352,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     (e.event.target as Element).setPointerCapture?.(e.event.pointerId);
   }
 
-  /** Update link preview point, pan, or rubber-band while dragging. */
+  /** Update link preview point, pan, rubber-band, or waypoint/segment drag. */
   protected onContainerPointerMove(event: PointerEvent): void {
     if (this.state.linkingFrom()) {
       const pt = this.coordinate.clientToSvg(
@@ -333,9 +383,18 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
         y2: pt.y,
       });
     }
+    if (this._draggingWaypoint && svg) {
+      const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+      this.operations.moveLinkWaypoint(
+        this._draggingWaypoint.linkId,
+        this._draggingWaypoint.pointIndex,
+        pt.x,
+        pt.y
+      );
+    }
   }
 
-  /** Complete or cancel link; end pan or rubber-band. */
+  /** Complete or cancel link; end pan or rubber-band. (Waypoint/segment drag use document listeners.) */
   protected onContainerPointerUp(event: PointerEvent): void {
     if (this._panning) {
       this._panning.target.releasePointerCapture?.(this._panning.pointerId);
@@ -392,6 +451,129 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** Start waypoint drag. Undo pushed on first move. */
+  protected onWaypointPointerDown(payload: WaypointPointerPayload): void {
+    if (this.state.linkingFrom()) return;
+    this._draggingWaypoint = {
+      linkId: payload.link.id,
+      pointIndex: payload.pointIndex,
+      pointerId: payload.event.pointerId,
+      target: payload.event.target as Element,
+      pushedUndo: false,
+    };
+    (payload.event.target as Element).setPointerCapture?.(payload.event.pointerId);
+    document.addEventListener('pointermove', this._waypointPointerMove);
+    document.addEventListener('pointerup', this._waypointPointerUp);
+  }
+
+  /** Path pointer down: start pending segment drag if link selected and hit on path. */
+  protected onPathPointerDown(payload: PathPointerPayload): void {
+    if (this.state.linkingFrom()) return;
+    if (!this.state.selectedLinkIds().has(payload.link.id)) return;
+    const svg = this.svgContainer?.nativeElement;
+    if (!svg) return;
+    const pt = this.coordinate.clientToSvg(svg, payload.event.clientX, payload.event.clientY);
+    const d = this.state.getDiagram();
+    if (!d) return;
+    const pts = this.linkGeometry.getPathPoints(payload.link, d);
+    const result = this.linkGeometry.findClosestSegment(pts, pt);
+    if (!result) return;
+    this._pendingSegmentDrag = {
+      linkId: payload.link.id,
+      segIdx: result.segIdx,
+      projected: result.projected,
+      pointerId: payload.event.pointerId,
+      target: payload.event.target as Element,
+    };
+    (payload.event.target as Element).setPointerCapture?.(payload.event.pointerId);
+    document.addEventListener('pointermove', this._segmentDragPointerMove);
+    document.addEventListener('pointerup', this._segmentDragPointerUp);
+  }
+
+  private onSegmentDragPointerMove(event: PointerEvent): void {
+    if (!this._pendingSegmentDrag || event.pointerId !== this._pendingSegmentDrag.pointerId) return;
+    const svg = this.svgContainer?.nativeElement;
+    if (!svg) return;
+    const d = this.state.getDiagram();
+    const link = d?.getLink(this._pendingSegmentDrag.linkId);
+    if (!d || !link) return;
+    const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+    const insertIdx = this.linkGeometry.segmentToPointInsertIndex(
+      link,
+      d,
+      this._pendingSegmentDrag.segIdx
+    );
+    document.removeEventListener('pointermove', this._segmentDragPointerMove);
+    document.removeEventListener('pointerup', this._segmentDragPointerUp);
+    this._pendingSegmentDrag.target.releasePointerCapture?.(this._pendingSegmentDrag.pointerId);
+    this.undoRedo.pushState();
+    this.operations.addLinkWaypoint(
+      this._pendingSegmentDrag.linkId,
+      insertIdx,
+      pt.x,
+      pt.y
+    );
+    this._draggingWaypoint = {
+      linkId: this._pendingSegmentDrag.linkId,
+      pointIndex: insertIdx,
+      pointerId: this._pendingSegmentDrag.pointerId,
+      target: this._pendingSegmentDrag.target,
+      pushedUndo: true,
+    };
+    this._pendingSegmentDrag.target.setPointerCapture?.(this._pendingSegmentDrag.pointerId);
+    document.addEventListener('pointermove', this._waypointPointerMove);
+    document.addEventListener('pointerup', this._waypointPointerUp);
+    this._pendingSegmentDrag = null;
+  }
+
+  private onSegmentDragPointerUp(event: PointerEvent): void {
+    if (!this._pendingSegmentDrag || event.pointerId !== this._pendingSegmentDrag.pointerId) return;
+    document.removeEventListener('pointermove', this._segmentDragPointerMove);
+    document.removeEventListener('pointerup', this._segmentDragPointerUp);
+    this._pendingSegmentDrag.target.releasePointerCapture?.(this._pendingSegmentDrag.pointerId);
+    this._pendingSegmentDrag = null;
+  }
+
+  /** Segment midpoint pointer down (0 waypoints): add first waypoint and start dragging it. */
+  protected onSegmentMidpointPointerDown(payload: SegmentMidpointPayload): void {
+    if (this.state.linkingFrom()) return;
+    this.undoRedo.pushState();
+    this.operations.addLinkWaypoint(payload.link.id, 0, payload.x, payload.y);
+    this._draggingWaypoint = {
+      linkId: payload.link.id,
+      pointIndex: 0,
+      pointerId: payload.event.pointerId,
+      target: payload.event.target as Element,
+      pushedUndo: true,
+    };
+    (payload.event.target as Element).setPointerCapture?.(payload.event.pointerId);
+    document.addEventListener('pointermove', this._waypointPointerMove);
+    document.addEventListener('pointerup', this._waypointPointerUp);
+  }
+
+  /** Right-click on link: show context menu; for now clear waypoints if any. */
+  protected onLinkContextMenu(payload: { link: Link; event: MouseEvent }): void {
+    payload.event.preventDefault();
+    if (payload.link.points.length > 0) {
+      this.operations.clearLinkWaypoints(payload.link.id);
+    }
+  }
+
+  /** Double-click on waypoint: remove it. Cancel any active drag of that waypoint. */
+  protected onWaypointDoubleClick(linkId: LinkId, index: number): void {
+    if (
+      this._draggingWaypoint &&
+      this._draggingWaypoint.linkId === linkId &&
+      this._draggingWaypoint.pointIndex === index
+    ) {
+      this._draggingWaypoint.target.releasePointerCapture?.(this._draggingWaypoint.pointerId);
+      document.removeEventListener('pointermove', this._waypointPointerMove);
+      document.removeEventListener('pointerup', this._waypointPointerUp);
+      this._draggingWaypoint = null;
+    }
+    this.operations.removeLinkWaypoint(linkId, index);
+  }
+
   /** Delete selected nodes and links (undoable). */
   protected onDeleteSelection(): void {
     this.operations.deleteSelection();
@@ -400,7 +582,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Pan, rubber-band, or clear selection on canvas pointer down. */
   protected onCanvasPointerDown(event: PointerEvent): void {
     const target = event.target as Element;
-    if (target.closest('g[app-graph-node]') || target.closest('.link-path')) return;
+    if (
+      target.closest('g[app-graph-node]') ||
+      target.closest('.link-path') ||
+      target.closest('.link-path-hit') ||
+      target.closest('.waypoint-handle') ||
+      target.closest('.segment-handle')
+    )
+      return;
     if (this.state.linkingFrom()) return;
 
     const svg = this.svgContainer?.nativeElement;

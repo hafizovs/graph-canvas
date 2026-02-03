@@ -72,6 +72,11 @@
               [diagram]="diagram()!"
               [selected]="selectedLinkIds().has(link.id)"
               (linkClick)="onLinkSelect($event)"
+              (waypointPointerDown)="onWaypointPointerDown($event)"
+              (pathPointerDown)="onPathPointerDown($event)"
+              (segmentMidpointPointerDown)="onSegmentMidpointPointerDown($event)"
+              (waypointDoubleClick)="onWaypointDoubleClick($event.link.id, $event.pointIndex)"
+              (linkContextMenu)="onLinkContextMenu($event)"
             ></g>
           }
           @if (linkingFrom() && linkingPreviewPoint()) {

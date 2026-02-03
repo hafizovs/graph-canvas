@@ -4,15 +4,17 @@ import {
   Node,
   Link,
   Port,
+  Point,
   deserializeDiagram,
   serializeDiagram,
   cloneDiagramJsonForPaste,
 } from '../../../../graph-core';
 import type { DiagramJson } from '../../../../graph-core';
-import type { NodeId, NodeShape, PortId } from '../../../../graph-core';
+import type { LinkId, NodeId, NodeShape, PortId } from '../../../../graph-core';
 import { GraphEditorStateService } from './graph-editor-state.service';
 import { GraphUndoRedoService } from './graph-undo-redo.service';
 import { GraphCoordinateService } from './graph-coordinate.service';
+import { GraphLinkGeometryService } from './graph-link-geometry.service';
 
 const PASTE_OFFSET = 20;
 
@@ -26,7 +28,8 @@ export class GraphOperationsService {
   constructor(
     private state: GraphEditorStateService,
     private undoRedo: GraphUndoRedoService,
-    private coordinate: GraphCoordinateService
+    private coordinate: GraphCoordinateService,
+    private linkGeometry: GraphLinkGeometryService
   ) {}
 
   /**
@@ -269,6 +272,115 @@ export class GraphOperationsService {
         );
     }
     this.state.setNodeSelection(new Set(newNodeIds));
+    this.state.setDiagram(d, true);
+    return true;
+  }
+
+  /**
+   * Add a waypoint to a link at the given index. Pushes undo before adding.
+   * For orthogonal routing, snaps the point to keep segments H/V.
+   */
+  addLinkWaypoint(linkId: LinkId, index: number, x: number, y: number): boolean {
+    const d = this.state.getDiagram();
+    const link = d?.getLink(linkId);
+    if (!d || !link) return false;
+
+    this.undoRedo.pushState();
+
+    let px = x;
+    let py = y;
+    if (this.state.snapToGridEnabled()) {
+      const snapped = this.coordinate.snapToGrid(x, y);
+      px = snapped.x;
+      py = snapped.y;
+    }
+
+    if (link.routing === 'orthogonal') {
+      const source = d.getPortPosition(link.sourcePortId);
+      const target = d.getPortPosition(link.targetPortId);
+      if (source && target) {
+        const prev =
+          index <= 0 ? source : link.points[index - 1];
+        const next =
+          index >= link.points.length ? target : link.points[index];
+        const snapped = this.linkGeometry.snapToOrthogonal(
+          { x: px, y: py },
+          prev,
+          next
+        );
+        px = snapped.x;
+        py = snapped.y;
+      }
+    }
+
+    const pt = new Point(px, py);
+    link.points.splice(index, 0, pt);
+    this.state.setDiagram(d, true);
+    return true;
+  }
+
+  /**
+   * Move an existing waypoint. Does not push undo (caller pushes at drag start).
+   */
+  moveLinkWaypoint(linkId: LinkId, index: number, x: number, y: number): boolean {
+    const d = this.state.getDiagram();
+    const link = d?.getLink(linkId);
+    if (!d || !link || index < 0 || index >= link.points.length) return false;
+
+    let px = x;
+    let py = y;
+    if (this.state.snapToGridEnabled()) {
+      const snapped = this.coordinate.snapToGrid(x, y);
+      px = snapped.x;
+      py = snapped.y;
+    }
+
+    if (link.routing === 'orthogonal') {
+      const source = d.getPortPosition(link.sourcePortId);
+      const target = d.getPortPosition(link.targetPortId);
+      if (source && target) {
+        const prev = index <= 0 ? source : link.points[index - 1];
+        const next =
+          index >= link.points.length - 1 ? target : link.points[index + 1];
+        const snapped = this.linkGeometry.snapToOrthogonal(
+          { x: px, y: py },
+          prev,
+          next
+        );
+        px = snapped.x;
+        py = snapped.y;
+      }
+    }
+
+    link.points[index] = new Point(px, py);
+    this.state.incrementRenderTick();
+    return true;
+  }
+
+  /**
+   * Remove a waypoint from a link. Pushes undo before removing.
+   */
+  removeLinkWaypoint(linkId: LinkId, index: number): boolean {
+    const d = this.state.getDiagram();
+    const link = d?.getLink(linkId);
+    if (!d || !link || index < 0 || index >= link.points.length) return false;
+
+    this.undoRedo.pushState();
+    link.points.splice(index, 1);
+    this.state.setDiagram(d, true);
+    return true;
+  }
+
+  /**
+   * Clear all waypoints from a link. Pushes undo before clearing.
+   */
+  clearLinkWaypoints(linkId: LinkId): boolean {
+    const d = this.state.getDiagram();
+    const link = d?.getLink(linkId);
+    if (!d || !link || link.points.length === 0) return false;
+
+    this.undoRedo.pushState();
+    link.points.length = 0;
     this.state.setDiagram(d, true);
     return true;
   }

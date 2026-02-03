@@ -1,4 +1,5 @@
 import type { NodeShape, PortSide, PortType } from './types';
+import type { LinkRouting } from './link';
 import { Diagram } from './diagram';
 import { Node } from './node';
 import { Link } from './link';
@@ -32,6 +33,7 @@ export interface LinkDto {
   sourcePortId: PortId;
   targetPortId: PortId;
   points?: Array<{ x: number; y: number }>;
+  routing?: LinkRouting;
 }
 
 /** JSON-serializable diagram data; format for file storage and undo/redo snapshots. */
@@ -71,6 +73,9 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
     };
     if (link.points.length > 0) {
       dto.points = link.points.map((p) => ({ x: p.x, y: p.y }));
+    }
+    if (link.routing !== 'straight') {
+      dto.routing = link.routing;
     }
     return dto;
   });
@@ -117,6 +122,7 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
         sourcePortId: ld.sourcePortId,
         targetPortId: ld.targetPortId,
         points: ld.points,
+        routing: ld.routing,
       })
     );
   }

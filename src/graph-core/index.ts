@@ -1,4 +1,5 @@
 export type { PointLike, Rect, NodeId, LinkId, PortId, PortSide, PortType, NodeShape } from './types';
+export type { LinkRouting } from './link';
 export * from './point';
 export * from './port';
 export * from './node';

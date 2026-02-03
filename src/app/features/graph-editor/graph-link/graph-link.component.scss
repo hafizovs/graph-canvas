@@ -2,12 +2,36 @@
   display: contents;
 }
 
-.link-path {
-  pointer-events: stroke;
+.link-path-hit {
   cursor: pointer;
+
+  &.link-selected {
+    cursor: grab;
+  }
+}
+
+.link-path {
+  pointer-events: none;
 
   &.link-selected {
     stroke: var(--link-selected-stroke, #06c);
     stroke-width: 3;
   }
+}
+
+.waypoint-handle,
+.segment-handle {
+  fill: var(--waypoint-handle-fill, #06c);
+  stroke: var(--waypoint-handle-stroke, #fff);
+  stroke-width: 1.5;
+  cursor: grab;
+  vector-effect: non-scaling-stroke;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.segment-handle {
+  fill: var(--segment-handle-fill, #9cf);
 }

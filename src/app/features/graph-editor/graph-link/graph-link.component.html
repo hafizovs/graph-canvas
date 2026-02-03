@@ -1,3 +1,17 @@
+<!-- Hit area: wide transparent stroke for segment grab; receives pointer and click -->
+<svg:path
+  class="link-path-hit"
+  [class.link-selected]="selected()"
+  [attr.d]="pathD()"
+  fill="none"
+  stroke="transparent"
+  stroke-width="20"
+  vector-effect="non-scaling-stroke"
+  (pointerdown)="onPathPointerDown($event)"
+  (click)="onLinkClick($event)"
+  (contextmenu)="onLinkContextMenu($event)"
+/>
+<!-- Visible path -->
 <svg:path
   class="link-path"
   [class.link-selected]="selected()"
@@ -6,5 +20,27 @@
   [attr.stroke]="previewTarget() ? 'var(--link-preview-stroke, #95a)' : 'var(--link-stroke, #666)'"
   stroke-width="2"
   vector-effect="non-scaling-stroke"
-  (click)="onLinkClick($event)"
+  pointer-events="none"
 />
+@if (selected() && !previewTarget()) {
+  @if (midpointForAdd(); as mid) {
+    <circle
+      class="segment-handle"
+      [attr.cx]="mid.x"
+      [attr.cy]="mid.y"
+      r="5"
+      (pointerdown)="onSegmentMidpointPointerDown($event)"
+    />
+  }
+  @for (point of waypoints(); track $index) {
+    <circle
+      class="waypoint-handle"
+      [attr.cx]="point.x"
+      [attr.cy]="point.y"
+      r="5"
+      (pointerdown)="onWaypointPointerDown($event, $index)"
+      (dblclick)="onWaypointDoubleClick($index)"
+      (contextmenu)="onWaypointContextMenu($event, $index)"
+    />
+  }
+}
