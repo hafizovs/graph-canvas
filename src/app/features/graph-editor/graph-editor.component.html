@@ -7,6 +7,8 @@
   <app-graph-toolbar
     (addNode)="onAddNode()"
     (deleteSelection)="onDeleteSelection()"
+    (rotateCw)="onRotateCw()"
+    (rotateCcw)="onRotateCcw()"
     (zoomIn)="onZoomIn()"
     (zoomOut)="onZoomOut()"
     (fitToView)="onFitToView()"
@@ -17,6 +19,7 @@
     (loadFromFile)="onLoadFromFile($event)"
     (loadFromStorage)="onLoadFromStorage()"
     [hasSelection]="hasSelection()"
+    [hasNodeSelection]="selectedNodeIds().size > 0"
     [snapToGridEnabled]="snapToGridEnabled()"
   />
 
@@ -70,6 +73,7 @@
               app-graph-link
               [link]="link"
               [diagram]="diagram()!"
+              [renderTick]="renderTick()"
               [selected]="selectedLinkIds().has(link.id)"
               (linkClick)="onLinkSelect($event)"
               (waypointPointerDown)="onWaypointPointerDown($event)"
@@ -97,10 +101,12 @@
             <g
               app-graph-node
               [node]="node"
+              [renderTick]="renderTick()"
               [selected]="selectedNodeIds().has(node.id)"
               (nodePointerDown)="onNodePointerDown($event)"
               (nodePointerMove)="onNodePointerMove($event)"
               (nodePointerUp)="onNodePointerUp($event)"
+              (nodeContextMenu)="onNodeContextMenu($event)"
               (portPointerDown)="onPortPointerDown($event)"
             ></g>
           }
@@ -157,6 +163,25 @@
         }
       </g>
     </svg>
+    @if (nodeContextMenuPosition(); as pos) {
+      <div
+        class="node-context-menu-backdrop"
+        (click)="closeNodeContextMenu()"
+      ></div>
+      <div
+        class="node-context-menu"
+        [style.left.px]="pos.x"
+        [style.top.px]="pos.y"
+        (click)="$event.stopPropagation()"
+      >
+        <button type="button" (click)="onRotateNodeContext(90)">
+          Rotate 90° CW
+        </button>
+        <button type="button" (click)="onRotateNodeContext(-90)">
+          Rotate 90° CCW
+        </button>
+      </div>
+    }
   </div>
   </div>
 </div>

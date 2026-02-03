@@ -39,6 +39,8 @@ export class GraphLinkComponent {
   readonly link = input.required<Link>();
   readonly diagram = input.required<Diagram>();
   readonly previewTarget = input<PointLike | null>(null);
+  /** When diagram is mutated in place (e.g. node rotation), bump so path recomputes. */
+  readonly renderTick = input<number>(0);
   readonly selected = input<boolean>(false);
 
   readonly linkClick = output<{ link: Link; shiftKey: boolean }>();
@@ -49,6 +51,7 @@ export class GraphLinkComponent {
   readonly linkContextMenu = output<{ link: Link; event: MouseEvent }>();
 
   protected readonly pathD = computed(() => {
+    this.renderTick(); // depend on tick so port positions (e.g. after node rotation) update
     const linkVal = this.link();
     const diagramVal = this.diagram();
     const target = this.previewTarget();
@@ -66,6 +69,7 @@ export class GraphLinkComponent {
 
   /** Midpoint when no waypoints (for adding first bend via drag). */
   protected readonly midpointForAdd = computed(() => {
+    this.renderTick();
     const linkVal = this.link();
     const diagramVal = this.diagram();
     if (linkVal.points.length > 0 || this.previewTarget()) return null;

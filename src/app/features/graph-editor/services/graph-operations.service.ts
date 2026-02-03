@@ -152,6 +152,21 @@ export class GraphOperationsService {
   }
 
   /**
+   * Rotate selected nodes by angleDeg degrees (clockwise). Pushes undo before applying.
+   */
+  rotateSelectedNodes(angleDeg: number): void {
+    const d = this.state.getDiagram();
+    const nodeIds = this.state.selectedNodeIds();
+    if (!d || nodeIds.size === 0) return;
+    this.undoRedo.pushState();
+    for (const nodeId of nodeIds) {
+      const n = d.getNode(nodeId);
+      if (n) n.setRotation((n.rotation ?? 0) + angleDeg);
+    }
+    this.state.setDiagram(d, true);
+  }
+
+  /**
    * Create a link from source port to target port if valid (target is input, no duplicate).
    * Pushes undo before adding.
    */

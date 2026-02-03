@@ -23,10 +23,14 @@ import {
 export class GraphToolbarComponent {
   readonly disabled = input<boolean>(false);
   readonly hasSelection = input<boolean>(false);
+  /** True when at least one node is selected (for rotate buttons). */
+  readonly hasNodeSelection = input<boolean>(false);
   readonly snapToGridEnabled = input<boolean>(true);
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
+  readonly rotateCw = output<void>();
+  readonly rotateCcw = output<void>();
   readonly zoomIn = output<void>();
   readonly zoomOut = output<void>();
   readonly fitToView = output<void>();
@@ -45,6 +49,16 @@ export class GraphToolbarComponent {
   /** Emit deleteSelection. */
   protected onDeleteSelection(): void {
     this.deleteSelection.emit();
+  }
+
+  /** Emit rotateCw (90° clockwise). */
+  protected onRotateCw(): void {
+    this.rotateCw.emit();
+  }
+
+  /** Emit rotateCcw (90° counter-clockwise). */
+  protected onRotateCcw(): void {
+    this.rotateCcw.emit();
   }
 
   protected onZoomIn(): void {

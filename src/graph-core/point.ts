@@ -39,4 +39,22 @@ export class Point implements PointLike {
   static from(p: PointLike): Point {
     return p instanceof Point ? p : new Point(p.x, p.y);
   }
+
+  /**
+   * Rotate a point around a center by an angle (degrees, clockwise as in SVG).
+   * @param p - Point to rotate
+   * @param cx - Center x
+   * @param cy - Center y
+   * @param angleDeg - Angle in degrees (positive = clockwise)
+   * @returns New Point
+   */
+  static rotateAround(p: PointLike, cx: number, cy: number, angleDeg: number): Point {
+    if (angleDeg === 0) return p instanceof Point ? p : new Point(p.x, p.y);
+    const rad = (angleDeg * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const dx = p.x - cx;
+    const dy = p.y - cy;
+    return new Point(cx + dx * cos + dy * sin, cy - dx * sin + dy * cos);
+  }
 }

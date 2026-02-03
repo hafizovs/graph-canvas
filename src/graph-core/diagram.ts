@@ -66,13 +66,20 @@ export class Diagram {
 
   /**
    * Get absolute position of a port by id (searches all nodes).
+   * Accounts for node rotation: port position is rotated around node center.
    * @returns Point in diagram coordinates, or undefined if port not found
    */
   getPortPosition(portId: PortId): Point | undefined {
     for (const node of this._nodes.values()) {
       const port = node.getPort(portId);
       if (port) {
-        return port.getAbsolutePosition(node.getRect());
+        const rect = node.getRect();
+        const pos = port.getAbsolutePosition(rect);
+        const angle = node.rotation ?? 0;
+        if (angle === 0) return pos;
+        const cx = rect.x + rect.width / 2;
+        const cy = rect.y + rect.height / 2;
+        return Point.rotateAround(pos, cx, cy, angle);
       }
     }
     return undefined;

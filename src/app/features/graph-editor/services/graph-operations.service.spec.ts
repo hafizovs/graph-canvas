@@ -95,4 +95,16 @@ describe('GraphOperationsService', () => {
     expect(pasted).toBeDefined();
     expect(pasted!.x).toBe(xBefore + 20);
   });
+
+  it('rotateSelectedNodes adds angle to selected nodes only', () => {
+    const d = state.getDiagram()!;
+    const n1 = d.getNode('n1')!;
+    const n2 = d.getNode('n2')!;
+    n1.setRotation(0);
+    n2.setRotation(10);
+    state.setNodeSelection(new Set(['n1']));
+    operations.rotateSelectedNodes(90);
+    expect(n1.rotation).toBe(90);
+    expect(n2.rotation).toBe(10);
+  });
 });

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import type { DiagramJson } from './serialization';
 import {
   deserializeDiagram,
   serializeDiagram,
@@ -65,6 +66,15 @@ describe('serializeDiagram', () => {
     expect(diagram2.links).toHaveLength(diagram.links.length);
     expect(diagram2.getNode('n1')?.x).toBe(diagram.getNode('n1')?.x);
   });
+
+  it('round-trip preserves node rotation', () => {
+    const diagram = deserializeDiagram(MOCK_DIAGRAM_SINGLE_NODE);
+    diagram.getNode('n1')!.setRotation(90);
+    const json = serializeDiagram(diagram);
+    expect(json.nodes[0].rotation).toBe(90);
+    const diagram2 = deserializeDiagram(json);
+    expect(diagram2.getNode('n1')!.rotation).toBe(90);
+  });
 });
 
 describe('cloneDiagramJsonForPaste', () => {
@@ -118,5 +128,28 @@ describe('cloneDiagramJsonForPaste', () => {
     expect(n1.ports.every((p) => p.nodeId === 'n1')).toBe(true);
     expect(json.links[0].sourcePortId).toBeDefined();
     expect(json.links[0].targetPortId).toBeDefined();
+  });
+
+  it('preserves node rotation when cloning for paste', () => {
+    const withRotation: DiagramJson = {
+      nodes: [
+        {
+          id: 'n1',
+          x: 50,
+          y: 50,
+          width: 100,
+          height: 60,
+          label: 'A',
+          rotation: 45,
+          ports: [
+            { id: 'p1-in', nodeId: 'n1', side: 'left', offset: 30, type: 'input' },
+            { id: 'p1-out', nodeId: 'n1', side: 'right', offset: 30, type: 'output' },
+          ],
+        },
+      ],
+      links: [],
+    };
+    const { json } = cloneDiagramJsonForPaste(withRotation, 0, 0, 0, 0);
+    expect(json.nodes[0].rotation).toBe(45);
   });
 });

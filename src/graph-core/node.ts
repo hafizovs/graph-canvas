@@ -11,6 +11,7 @@ export interface NodeConfig {
   height?: number;
   label?: string;
   shape?: NodeShape;
+  rotation?: number;
   ports?: Port[];
 }
 
@@ -25,6 +26,7 @@ export class Node implements NodeConfig {
   height: number;
   label: string;
   shape: NodeShape;
+  rotation: number;
   private _ports: Map<PortId, Port> = new Map();
 
   constructor(config: NodeConfig) {
@@ -35,6 +37,7 @@ export class Node implements NodeConfig {
     this.height = config.height ?? 60;
     this.label = config.label ?? '';
     this.shape = config.shape ?? 'rectangle';
+    this.rotation = config.rotation ?? 0;
     for (const p of config.ports ?? []) {
       this._ports.set(p.id, p);
     }
@@ -75,5 +78,10 @@ export class Node implements NodeConfig {
   setPositionFromPoint(p: PointLike): void {
     this.x = p.x;
     this.y = p.y;
+  }
+
+  /** Set node rotation in degrees (clockwise). In-place. */
+  setRotation(deg: number): void {
+    this.rotation = deg;
   }
 }

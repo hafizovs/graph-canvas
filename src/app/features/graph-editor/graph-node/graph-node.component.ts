@@ -22,6 +22,12 @@ export interface PortPointerEvent {
   event: PointerEvent;
 }
 
+/** Emitted on node body context menu (right-click). Used for rotate menu. */
+export interface NodeContextMenuEvent {
+  node: Node;
+  event: MouseEvent;
+}
+
 /** Presentational component for one graph node. Renders label and ports; delegates pointer events to parent. */
 @Component({
   selector: 'g[app-graph-node]',
@@ -34,23 +40,31 @@ export interface PortPointerEvent {
     '(pointermove)': 'onNodePointerMove($event)',
     '(pointerup)': 'onNodePointerUp($event)',
     '(pointerleave)': 'onNodePointerUp($event)',
+    '(contextmenu)': 'onNodeContextMenu($event)',
   },
   templateUrl: './graph-node.component.html',
   styleUrl: './graph-node.component.scss',
 })
 export class GraphNodeComponent {
   readonly node = input.required<Node>();
+  /** When diagram is mutated in place (e.g. rotation), bump this so transform recomputes. */
+  readonly renderTick = input<number>(0);
   readonly selected = input<boolean>(false);
 
   readonly nodePointerDown = output<NodePointerEvent>();
   readonly nodePointerMove = output<NodePointerEvent>();
   readonly nodePointerUp = output<NodePointerEvent>();
+  readonly nodeContextMenu = output<NodeContextMenuEvent>();
   readonly portPointerDown = output<PortPointerEvent>();
 
-  /** SVG transform string: translate(node.x, node.y). */
+  /** SVG transform: translate to node center, rotate, translate back so content rotates around center. */
   protected readonly transformValue = computed(() => {
+    this.renderTick(); // depend on tick so in-place mutations (e.g. rotation) trigger re-render
     const n = this.node();
-    return `translate(${n.x},${n.y})`;
+    const cx = n.x + n.width / 2;
+    const cy = n.y + n.height / 2;
+    const angle = n.rotation ?? 0;
+    return `translate(${cx},${cy}) rotate(${angle}) translate(${-n.width / 2},${-n.height / 2})`;
   });
 
   /** Emit nodePointerDown if target is not a port. */
@@ -67,6 +81,14 @@ export class GraphNodeComponent {
   /** Forward pointer up to parent (end drag or apply click selection). */
   protected onNodePointerUp(event: PointerEvent): void {
     this.nodePointerUp.emit({ node: this.node(), event, shiftKey: event.shiftKey });
+  }
+
+  /** Emit nodeContextMenu if target is not a port (so parent can show rotate menu). */
+  protected onNodeContextMenu(event: MouseEvent): void {
+    if ((event.target as Element).closest('[data-port-id]')) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.nodeContextMenu.emit({ node: this.node(), event });
   }
 
   /** Emit portPointerDown and stop propagation (start link from output). */

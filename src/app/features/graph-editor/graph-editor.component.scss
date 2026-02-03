@@ -68,3 +68,35 @@
     stroke-width: 2;
   }
 }
+
+.node-context-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+}
+
+.node-context-menu {
+  position: fixed;
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--menu-bg, #fff);
+  border: 1px solid var(--menu-border, #ccc);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+
+  button {
+    padding: 6px 12px;
+    text-align: left;
+    border: none;
+    border-radius: 2px;
+    background: transparent;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--menu-item-hover, #eee);
+    }
+  }
+}

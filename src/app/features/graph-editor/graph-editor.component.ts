@@ -18,7 +18,10 @@ import { GraphLinkComponent } from './graph-link/graph-link.component';
 import { GraphNodeComponent } from './graph-node/graph-node.component';
 import { GraphPaletteComponent } from './graph-palette/graph-palette.component';
 import { GraphToolbarComponent } from './graph-toolbar/graph-toolbar.component';
-import type { NodePointerEvent } from './graph-node/graph-node.component';
+import type {
+  NodePointerEvent,
+  NodeContextMenuEvent,
+} from './graph-node/graph-node.component';
 import type { PortPointerEvent } from './graph-node/graph-node.component';
 import type { Link, Node } from '../../../graph-core';
 import type { LinkId, NodeId, PortId } from '../../../graph-core';
@@ -74,6 +77,8 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   protected readonly draggingFromPalette = signal<{ shape: NodeShape; pointerId: number } | null>(null);
   protected readonly paletteDropPreview = signal<{ x: number; y: number; shape: NodeShape } | null>(null);
+  /** Node context menu position (client coordinates); null when closed. */
+  protected readonly nodeContextMenuPosition = signal<{ x: number; y: number } | null>(null);
 
   private _palettePointerMove = (e: PointerEvent) => this.onPalettePointerMove(e);
   private _palettePointerUp = (e: PointerEvent) => this.onPalettePointerUp(e);
@@ -559,6 +564,37 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** Right-click on node: ensure node is selected and show rotate context menu. */
+  protected onNodeContextMenu(payload: NodeContextMenuEvent): void {
+    const { node, event } = payload;
+    if (!this.selectedNodeIds().has(node.id)) {
+      this.state.setNodeSelection(new Set([node.id]));
+      this.state.setLinkSelection(new Set());
+    }
+    this.nodeContextMenuPosition.set({ x: event.clientX, y: event.clientY });
+  }
+
+  /** Apply rotation from context menu and close menu. */
+  protected onRotateNodeContext(angleDeg: number): void {
+    this.operations.rotateSelectedNodes(angleDeg);
+    this.nodeContextMenuPosition.set(null);
+  }
+
+  /** Close node context menu (e.g. backdrop click). */
+  protected closeNodeContextMenu(): void {
+    this.nodeContextMenuPosition.set(null);
+  }
+
+  /** Rotate selected nodes 90° clockwise (toolbar / R). */
+  protected onRotateCw(): void {
+    this.operations.rotateSelectedNodes(90);
+  }
+
+  /** Rotate selected nodes 90° counter-clockwise (toolbar / Shift+R). */
+  protected onRotateCcw(): void {
+    this.operations.rotateSelectedNodes(-90);
+  }
+
   /** Double-click on waypoint: remove it. Cancel any active drag of that waypoint. */
   protected onWaypointDoubleClick(linkId: LinkId, index: number): void {
     if (
@@ -688,6 +724,13 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
       this.onDeleteSelection();
+      return;
+    }
+
+    // KeyR = physical R key (works with any layout, e.g. Russian); Shift+R = CCW
+    if (event.code === 'KeyR' && !event.ctrlKey && !event.metaKey && this.selectedNodeIds().size > 0) {
+      event.preventDefault();
+      this.operations.rotateSelectedNodes(event.shiftKey ? -90 : 90);
     }
   }
 

@@ -70,4 +70,31 @@ describe('Diagram', () => {
     const diagram = deserializeDiagram(MOCK_DIAGRAM_EMPTY);
     expect(diagram.getPortPosition('unknown')).toBeUndefined();
   });
+
+  it('getPortPosition returns rotated port position when node has rotation', () => {
+    const diagram = new Diagram();
+    const node = new Node({
+      id: 'n1',
+      x: 0,
+      y: 0,
+      width: 100,
+      height: 50,
+      ports: [
+        new Port({
+          id: 'p1-out',
+          nodeId: 'n1',
+          side: 'left',
+          offset: 25,
+          type: 'output',
+        }),
+      ],
+    });
+    node.setRotation(90);
+    diagram.addNode(node);
+    const pos = diagram.getPortPosition('p1-out');
+    expect(pos).toBeDefined();
+    // Unrotated port at left side: (0, 25). Center (50, 25). Rotate 90° CW -> (50, 75).
+    expect(pos!.x).toBeCloseTo(50, 5);
+    expect(pos!.y).toBeCloseTo(75, 5);
+  });
 });

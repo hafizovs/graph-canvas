@@ -40,6 +40,29 @@ describe('Node', () => {
     expect(node.y).toBe(20);
   });
 
+  it('rotation defaults to 0', () => {
+    const node = new Node({
+      id: 'n1',
+      x: 0,
+      y: 0,
+      ports: [],
+    });
+    expect(node.rotation).toBe(0);
+  });
+
+  it('setRotation updates rotation', () => {
+    const node = new Node({
+      id: 'n1',
+      x: 0,
+      y: 0,
+      ports: [],
+    });
+    node.setRotation(90);
+    expect(node.rotation).toBe(90);
+    node.setRotation(-45);
+    expect(node.rotation).toBe(-45);
+  });
+
   it('ports returns added ports', () => {
     const node = new Node({
       id: 'n1',
