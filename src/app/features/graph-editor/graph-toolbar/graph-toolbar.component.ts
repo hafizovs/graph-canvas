@@ -25,12 +25,18 @@ export class GraphToolbarComponent {
   readonly hasSelection = input<boolean>(false);
   /** True when at least one node is selected (for rotate buttons). */
   readonly hasNodeSelection = input<boolean>(false);
+  /** True when can group (2+ regular nodes selected). */
+  readonly canGroup = input<boolean>(false);
+  /** True when can ungroup (1 group node selected). */
+  readonly canUngroup = input<boolean>(false);
   readonly snapToGridEnabled = input<boolean>(true);
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
   readonly rotateCw = output<void>();
   readonly rotateCcw = output<void>();
+  readonly group = output<void>();
+  readonly ungroup = output<void>();
   readonly zoomIn = output<void>();
   readonly zoomOut = output<void>();
   readonly fitToView = output<void>();
@@ -59,6 +65,16 @@ export class GraphToolbarComponent {
   /** Emit rotateCcw (90° counter-clockwise). */
   protected onRotateCcw(): void {
     this.rotateCcw.emit();
+  }
+
+  /** Emit group. */
+  protected onGroup(): void {
+    this.group.emit();
+  }
+
+  /** Emit ungroup. */
+  protected onUngroup(): void {
+    this.ungroup.emit();
   }
 
   protected onZoomIn(): void {

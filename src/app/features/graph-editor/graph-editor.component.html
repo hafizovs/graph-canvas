@@ -9,6 +9,8 @@
     (deleteSelection)="onDeleteSelection()"
     (rotateCw)="onRotateCw()"
     (rotateCcw)="onRotateCcw()"
+    (group)="onGroup()"
+    (ungroup)="onUngroup()"
     (zoomIn)="onZoomIn()"
     (zoomOut)="onZoomOut()"
     (fitToView)="onFitToView()"
@@ -20,6 +22,8 @@
     (loadFromStorage)="onLoadFromStorage()"
     [hasSelection]="hasSelection()"
     [hasNodeSelection]="selectedNodeIds().size > 0"
+    [canGroup]="canGroup()"
+    [canUngroup]="canUngroup()"
     [snapToGridEnabled]="snapToGridEnabled()"
   />
 
@@ -98,17 +102,33 @@
         </g>
         <g class="nodes-layer">
           @for (node of diagram()?.nodes ?? []; track node.id) {
-            <g
-              app-graph-node
-              [node]="node"
-              [renderTick]="renderTick()"
-              [selected]="selectedNodeIds().has(node.id)"
-              (nodePointerDown)="onNodePointerDown($event)"
-              (nodePointerMove)="onNodePointerMove($event)"
-              (nodePointerUp)="onNodePointerUp($event)"
-              (nodeContextMenu)="onNodeContextMenu($event)"
-              (portPointerDown)="onPortPointerDown($event)"
-            ></g>
+            @if (node.nodeType === 'group') {
+              <g
+                app-graph-group-node
+                [node]="$any(node)"
+                [diagram]="diagram()!"
+                [renderTick]="renderTick()"
+                [selected]="selectedNodeIds().has(node.id)"
+                (nodePointerDown)="onGroupNodePointerDown($event)"
+                (nodePointerMove)="onGroupNodePointerMove($event)"
+                (nodePointerUp)="onGroupNodePointerUp($event)"
+                (nodeContextMenu)="onGroupNodeContextMenu($event)"
+                (portPointerDown)="onGroupPortPointerDown($event)"
+                (resizeHandlePointerDown)="onResizeHandlePointerDown($event)"
+              ></g>
+            } @else {
+              <g
+                app-graph-node
+                [node]="node"
+                [renderTick]="renderTick()"
+                [selected]="selectedNodeIds().has(node.id)"
+                (nodePointerDown)="onNodePointerDown($event)"
+                (nodePointerMove)="onNodePointerMove($event)"
+                (nodePointerUp)="onNodePointerUp($event)"
+                (nodeContextMenu)="onNodeContextMenu($event)"
+                (portPointerDown)="onPortPointerDown($event)"
+              ></g>
+            }
           }
         </g>
         @if (normalizedSelectionRect; as nr) {

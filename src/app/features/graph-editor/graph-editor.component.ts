@@ -12,10 +12,11 @@ import {
   effect,
 } from '@angular/core';
 import type { DiagramJson } from '../../../graph-core';
-import { MOCK_DIAGRAM_CHAIN } from '../../../graph-core';
+import { MOCK_DIAGRAM_CHAIN, GroupNode } from '../../../graph-core';
 import type { NodeShape } from '../../../graph-core';
 import { GraphLinkComponent } from './graph-link/graph-link.component';
 import { GraphNodeComponent } from './graph-node/graph-node.component';
+import { GraphGroupNodeComponent } from './graph-group-node/graph-group-node.component';
 import { GraphPaletteComponent } from './graph-palette/graph-palette.component';
 import { GraphToolbarComponent } from './graph-toolbar/graph-toolbar.component';
 import type {
@@ -23,6 +24,12 @@ import type {
   NodeContextMenuEvent,
 } from './graph-node/graph-node.component';
 import type { PortPointerEvent } from './graph-node/graph-node.component';
+import type {
+  GroupNodePointerEvent,
+  GroupNodeContextMenuEvent,
+  GroupPortPointerEvent,
+  ResizeHandlePointerEvent,
+} from './graph-group-node/graph-group-node.component';
 import type { Link, Node } from '../../../graph-core';
 import type { LinkId, NodeId, PortId } from '../../../graph-core';
 import { GraphEditorStateService } from './services/graph-editor-state.service';
@@ -31,6 +38,7 @@ import { GraphOperationsService } from './services/graph-operations.service';
 import { GraphLinkGeometryService } from './services/graph-link-geometry.service';
 import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
+import { GraphResizeService } from './services/graph-resize.service';
 import { serializeDiagram } from '../../../graph-core';
 import type {
   PathPointerPayload,
@@ -46,7 +54,7 @@ import type {
   selector: 'app-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GraphLinkComponent, GraphNodeComponent, GraphPaletteComponent, GraphToolbarComponent],
+  imports: [GraphLinkComponent, GraphNodeComponent, GraphGroupNodeComponent, GraphPaletteComponent, GraphToolbarComponent],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
 })
@@ -59,6 +67,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   private readonly linkGeometry = inject(GraphLinkGeometryService);
   private readonly coordinate = inject(GraphCoordinateService);
   private readonly viewport = inject(GraphViewportService);
+  private readonly resize = inject(GraphResizeService);
 
   protected readonly diagram = this.state.diagram;
   protected readonly renderTick = this.state.renderTick;
@@ -731,6 +740,21 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     if (event.code === 'KeyR' && !event.ctrlKey && !event.metaKey && this.selectedNodeIds().size > 0) {
       event.preventDefault();
       this.operations.rotateSelectedNodes(event.shiftKey ? -90 : 90);
+      return;
+    }
+
+    // Ctrl+G / Cmd+G = Group selected nodes
+    if (event.key === 'g' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
+      event.preventDefault();
+      this.onGroup();
+      return;
+    }
+
+    // Ctrl+Shift+G / Cmd+Shift+G = Ungroup
+    if (event.key === 'G' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+      event.preventDefault();
+      this.onUngroup();
+      return;
     }
   }
 
@@ -787,6 +811,98 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onZoomToSelection(): void {
     const { width, height } = this.getContainerSize();
     this.viewport.zoomToSelection(40, width, height);
+  }
+
+  /** Group selected nodes into a GroupNode. */
+  protected onGroup(): void {
+    this.operations.groupSelectedNodes();
+  }
+
+  /** Ungroup the selected GroupNode. */
+  protected onUngroup(): void {
+    const selectedNodeIds = this.state.selectedNodeIds();
+    if (selectedNodeIds.size !== 1) return;
+    
+    const nodeId = Array.from(selectedNodeIds)[0];
+    this.operations.ungroupNode(nodeId);
+  }
+
+  /** Check if grouping is possible (2+ regular nodes selected). */
+  protected canGroup(): boolean {
+    const d = this.state.getDiagram();
+    const selectedNodeIds = this.state.selectedNodeIds();
+    if (!d || selectedNodeIds.size < 2) return false;
+
+    // Check that all selected nodes are regular nodes (not groups)
+    for (const nodeId of selectedNodeIds) {
+      const node = d.getNode(nodeId);
+      if (!node || node.nodeType === 'group') return false;
+    }
+    return true;
+  }
+
+  /** Check if ungrouping is possible (1 group node selected). */
+  protected canUngroup(): boolean {
+    const d = this.state.getDiagram();
+    const selectedNodeIds = this.state.selectedNodeIds();
+    if (!d || selectedNodeIds.size !== 1) return false;
+
+    const nodeId = Array.from(selectedNodeIds)[0];
+    const node = d.getNode(nodeId);
+    return node instanceof GroupNode;
+  }
+
+  /** Handle group node pointer events (same as regular nodes). */
+  protected onGroupNodePointerDown(event: GroupNodePointerEvent): void {
+    this.onNodePointerDown(event as unknown as NodePointerEvent);
+  }
+
+  protected onGroupNodePointerMove(event: GroupNodePointerEvent): void {
+    this.onNodePointerMove(event as unknown as NodePointerEvent);
+  }
+
+  protected onGroupNodePointerUp(event: GroupNodePointerEvent): void {
+    this.onNodePointerUp(event as unknown as NodePointerEvent);
+  }
+
+  protected onGroupNodeContextMenu(event: GroupNodeContextMenuEvent): void {
+    // Groups don't support rotation, so no context menu for now
+  }
+
+  /** Handle group port pointer events (same as regular ports). */
+  protected onGroupPortPointerDown(event: GroupPortPointerEvent): void {
+    this.onPortPointerDown(event as unknown as PortPointerEvent);
+  }
+
+  /** Handle resize handle pointer down. */
+  protected onResizeHandlePointerDown(event: ResizeHandlePointerEvent): void {
+    const svg = this.svgContainer?.nativeElement;
+    if (!svg) return;
+
+    const pt = this.coordinate.clientToSvg(svg, event.event.clientX, event.event.clientY);
+    this.resize.startResize(event.node.id, event.handle, pt.x, pt.y);
+
+    // Set up pointer capture and listeners
+    const target = event.event.target as Element;
+    target.setPointerCapture?.(event.event.pointerId);
+    
+    const pointerId = event.event.pointerId;
+    const onMove = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
+      const pt = this.coordinate.clientToSvg(svg, e.clientX, e.clientY);
+      this.resize.updateResize(pt.x, pt.y);
+    };
+    
+    const onUp = (e: PointerEvent) => {
+      if (e.pointerId !== pointerId) return;
+      target.releasePointerCapture?.(pointerId);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      this.resize.endResize();
+    };
+
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
   }
 
   protected getPreviewDiamondPoints(): string {

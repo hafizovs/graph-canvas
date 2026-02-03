@@ -1,0 +1,96 @@
+:host {
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.group-container {
+  fill: var(--group-fill, rgba(240, 248, 255, 0.95));
+  stroke: var(--group-stroke, #4a90e2);
+  stroke-width: 2;
+  stroke-dasharray: 5, 3;
+  transition: filter 0.15s ease;
+
+  :host:hover & {
+    filter: brightness(0.98);
+  }
+
+  &.group-selected {
+    stroke: var(--group-selected-stroke, #0066cc);
+    stroke-width: 3;
+    stroke-dasharray: none;
+  }
+}
+
+.group-label {
+  font-size: 16px;
+  font-weight: 600;
+  fill: var(--group-label-color, #2c5aa0);
+  pointer-events: none;
+  user-select: none;
+}
+
+.group-preview {
+  pointer-events: none;
+}
+
+.preview-node {
+  fill: var(--preview-node-fill, #e8f4f8);
+  stroke: var(--preview-node-stroke, #7ab8d9);
+  stroke-width: 1;
+  opacity: 0.8;
+}
+
+.preview-label {
+  font-size: 10px;
+  fill: var(--preview-label-color, #555);
+  pointer-events: none;
+  user-select: none;
+}
+
+.group-port-container {
+  .group-port {
+    fill: var(--port-fill, #555);
+    stroke: var(--port-stroke, #333);
+    stroke-width: 2;
+    cursor: crosshair;
+    transition: transform 0.15s ease;
+
+    &:hover {
+      transform: scale(1.2);
+      transform-origin: center;
+    }
+
+    &.port-input {
+      fill: var(--port-input-fill, #5a9);
+    }
+
+    &.port-output {
+      fill: var(--port-output-fill, #95a);
+    }
+  }
+
+  .group-port-label {
+    font-size: 11px;
+    fill: var(--port-label-color, #444);
+    pointer-events: none;
+    user-select: none;
+    font-weight: 500;
+  }
+}
+
+.resize-handle {
+  fill: var(--resize-handle-fill, #fff);
+  stroke: var(--resize-handle-stroke, #0066cc);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    fill: var(--resize-handle-hover-fill, #0066cc);
+    transform: scale(1.3);
+    transform-origin: center;
+  }
+}

@@ -1,8 +1,9 @@
-export type { PointLike, Rect, NodeId, LinkId, PortId, PortSide, PortType, NodeShape } from './types';
+export type { PointLike, Rect, NodeId, LinkId, PortId, PortSide, PortType, NodeShape, NodeType } from './types';
 export type { LinkRouting } from './link';
 export * from './point';
 export * from './port';
 export * from './node';
+export * from './group-node';
 export * from './link';
 export * from './diagram';
 export type { DiagramJson, NodeDto, PortDto, LinkDto } from './serialization';

@@ -1,7 +1,8 @@
-import type { NodeShape, PortSide, PortType } from './types';
+import type { NodeShape, NodeType, PortSide, PortType } from './types';
 import type { LinkRouting } from './link';
 import { Diagram } from './diagram';
 import { Node } from './node';
+import { GroupNode } from './group-node';
 import { Link } from './link';
 import { Port } from './port';
 import type { NodeId, LinkId, PortId } from './types';
@@ -25,6 +26,11 @@ export interface NodeDto {
   label?: string;
   shape?: NodeShape;
   rotation?: number;
+  nodeType?: NodeType;
+  childNodeIds?: NodeId[];
+  childLinkIds?: LinkId[];
+  originalPositions?: Record<NodeId, { x: number; y: number }>;
+  scale?: number;
   ports: PortDto[];
 }
 
@@ -49,23 +55,42 @@ export interface DiagramJson {
  * @returns DiagramJson
  */
 export function serializeDiagram(diagram: Diagram): DiagramJson {
-  const nodes: NodeDto[] = diagram.nodes.map((node) => ({
-    id: node.id,
-    x: node.x,
-    y: node.y,
-    width: node.width,
-    height: node.height,
-    label: node.label,
-    shape: node.shape,
-    rotation: node.rotation,
-    ports: node.ports.map((p) => ({
-      id: p.id,
-      nodeId: p.nodeId,
-      side: p.side,
-      offset: p.offset,
-      type: p.type,
-    })),
-  }));
+  const nodes: NodeDto[] = diagram.nodes.map((node) => {
+    const dto: NodeDto = {
+      id: node.id,
+      x: node.x,
+      y: node.y,
+      width: node.width,
+      height: node.height,
+      label: node.label,
+      shape: node.shape,
+      rotation: node.rotation,
+      ports: node.ports.map((p) => ({
+        id: p.id,
+        nodeId: p.nodeId,
+        side: p.side,
+        offset: p.offset,
+        type: p.type,
+      })),
+    };
+    
+    // Add group-specific properties if this is a GroupNode
+    if (node.nodeType === 'group' && node instanceof GroupNode) {
+      dto.nodeType = 'group';
+      dto.childNodeIds = Array.from(node.childNodeIds);
+      dto.childLinkIds = Array.from(node.childLinkIds);
+      dto.scale = node.scale;
+      
+      // Convert Map to Record for JSON serialization
+      const originalPositions: Record<NodeId, { x: number; y: number }> = {};
+      for (const [nodeId, pos] of node.originalPositions.entries()) {
+        originalPositions[nodeId] = { x: pos.x, y: pos.y };
+      }
+      dto.originalPositions = originalPositions;
+    }
+    
+    return dto;
+  });
 
   const links: LinkDto[] = diagram.links.map((link) => {
     const dto: LinkDto = {
@@ -104,17 +129,47 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
           type: p.type,
         })
     );
-    const node = new Node({
-      id: nd.id,
-      x: nd.x,
-      y: nd.y,
-      width: nd.width,
-      height: nd.height,
-      label: nd.label,
-      shape: nd.shape,
-      rotation: nd.rotation,
-      ports,
-    });
+    
+    let node: Node;
+    
+    // Create GroupNode if nodeType is 'group'
+    if (nd.nodeType === 'group') {
+      const originalPositions = new Map<NodeId, { x: number; y: number }>();
+      if (nd.originalPositions) {
+        for (const [nodeId, pos] of Object.entries(nd.originalPositions)) {
+          originalPositions.set(nodeId as NodeId, pos);
+        }
+      }
+      
+      node = new GroupNode({
+        id: nd.id,
+        x: nd.x,
+        y: nd.y,
+        width: nd.width,
+        height: nd.height,
+        label: nd.label,
+        rotation: nd.rotation,
+        childNodeIds: nd.childNodeIds,
+        childLinkIds: nd.childLinkIds,
+        originalPositions,
+        scale: nd.scale,
+        ports,
+      });
+    } else {
+      node = new Node({
+        id: nd.id,
+        x: nd.x,
+        y: nd.y,
+        width: nd.width,
+        height: nd.height,
+        label: nd.label,
+        shape: nd.shape,
+        rotation: nd.rotation,
+        nodeType: nd.nodeType,
+        ports,
+      });
+    }
+    
     diagram.addNode(node);
   }
 
@@ -168,7 +223,7 @@ export function cloneDiagramJsonForPaste(
         nodeId: newNodeId,
       };
     });
-    return {
+    const newNode: NodeDto = {
       ...nd,
       id: newNodeId,
       x: nd.x + offsetX,
@@ -176,6 +231,13 @@ export function cloneDiagramJsonForPaste(
       rotation: nd.rotation,
       ports: newPorts,
     };
+    
+    // Update child node IDs for group nodes
+    if (nd.nodeType === 'group' && nd.childNodeIds) {
+      newNode.childNodeIds = nd.childNodeIds.map((childId) => nodeIdMap.get(childId) ?? childId);
+    }
+    
+    return newNode;
   });
 
   const newNodeIds = newNodes.map((n) => n.id);

@@ -43,3 +43,6 @@ export type NodeShape =
   | 'parallelogram'
   | 'pentagon'
   | 'cross';
+
+/** Type of node: regular node or group container. */
+export type NodeType = 'regular' | 'group';

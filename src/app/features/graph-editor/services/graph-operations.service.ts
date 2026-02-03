@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import {
   Diagram,
   Node,
+  GroupNode,
   Link,
   Port,
   Point,
@@ -10,7 +11,7 @@ import {
   cloneDiagramJsonForPaste,
 } from '../../../../graph-core';
 import type { DiagramJson } from '../../../../graph-core';
-import type { LinkId, NodeId, NodeShape, PortId } from '../../../../graph-core';
+import type { LinkId, NodeId, NodeShape, PortId, PortSide } from '../../../../graph-core';
 import { GraphEditorStateService } from './graph-editor-state.service';
 import { GraphUndoRedoService } from './graph-undo-redo.service';
 import { GraphCoordinateService } from './graph-coordinate.service';
@@ -199,6 +200,7 @@ export class GraphOperationsService {
 
   /**
    * Delete all selected nodes and links. Pushes undo before deleting.
+   * Shows confirmation dialog if deleting a group node.
    * Returns true if anything was removed.
    */
   deleteSelection(): boolean {
@@ -208,14 +210,47 @@ export class GraphOperationsService {
     const linkIds = this.state.selectedLinkIds();
     if (nodeIds.size === 0 && linkIds.size === 0) return false;
 
+    // Check if any selected nodes are groups
+    let hasGroups = false;
+    for (const nodeId of nodeIds) {
+      const node = d.getNode(nodeId);
+      if (node instanceof GroupNode) {
+        hasGroups = true;
+        break;
+      }
+    }
+
+    // Show confirmation dialog if deleting groups
+    if (hasGroups) {
+      const confirmed = window.confirm(
+        'Delete group and all its contents? This will remove the group and all nodes/links inside it.'
+      );
+      if (!confirmed) return false;
+    }
+
     this.undoRedo.pushState();
     let changed = false;
+    
+    // Delete group nodes and their children
     for (const nodeId of nodeIds) {
+      const node = d.getNode(nodeId);
+      if (node instanceof GroupNode) {
+        // Delete all child nodes
+        for (const childNodeId of node.childNodeIds) {
+          d.removeNode(childNodeId);
+        }
+        // Delete all child links
+        for (const childLinkId of node.childLinkIds) {
+          d.removeLink(childLinkId);
+        }
+      }
       if (d.removeNode(nodeId)) changed = true;
     }
+    
     for (const linkId of linkIds) {
       if (d.removeLink(linkId)) changed = true;
     }
+    
     if (changed) {
       this.state.clearSelection();
       this.state.setDiagram(d, true);
@@ -398,5 +433,304 @@ export class GraphOperationsService {
     link.points.length = 0;
     this.state.setDiagram(d, true);
     return true;
+  }
+
+  /**
+   * Group selected nodes into a GroupNode container.
+   * Requirements: at least 2 regular nodes selected, no groups selected.
+   * Creates external ports for links crossing group boundary.
+   * Pushes undo before grouping.
+   */
+  groupSelectedNodes(): boolean {
+    const d = this.state.getDiagram();
+    const selectedNodeIds = this.state.selectedNodeIds();
+    if (!d || selectedNodeIds.size < 2) return false;
+
+    // Check that all selected nodes are regular nodes (not groups)
+    const selectedNodes: Node[] = [];
+    for (const nodeId of selectedNodeIds) {
+      const node = d.getNode(nodeId);
+      if (!node) return false;
+      if (node.nodeType === 'group') {
+        // Don't allow grouping of groups (nested groups not supported yet)
+        return false;
+      }
+      selectedNodes.push(node);
+    }
+
+    this.undoRedo.pushState();
+
+    // Calculate bounding box of selected nodes
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    const originalPositions = new Map<NodeId, { x: number; y: number }>();
+    for (const node of selectedNodes) {
+      minX = Math.min(minX, node.x);
+      minY = Math.min(minY, node.y);
+      maxX = Math.max(maxX, node.x + node.width);
+      maxY = Math.max(maxY, node.y + node.height);
+      originalPositions.set(node.id, { x: node.x, y: node.y });
+    }
+
+    const padding = 30;
+    const groupX = minX - padding;
+    const groupY = minY - padding;
+    const groupWidth = maxX - minX + 2 * padding;
+    const groupHeight = maxY - minY + 2 * padding;
+
+    // Create group node
+    const groupId = `g${this.state.incrementNodeIdCounter()}` as NodeId;
+    const groupNode = new GroupNode({
+      id: groupId,
+      x: groupX,
+      y: groupY,
+      width: groupWidth,
+      height: groupHeight,
+      label: `Group ${this.state.getNodeIdCounter()}`,
+      childNodeIds: Array.from(selectedNodeIds),
+      childLinkIds: [],
+      originalPositions,
+      scale: 1,
+      ports: [],
+    });
+
+    // Find internal and external links
+    const childNodeIdSet = new Set(selectedNodeIds);
+    const internalLinkIds: LinkId[] = [];
+    const externalLinks: Array<{
+      link: Link;
+      isOutgoing: boolean;
+      childPortId: PortId;
+      externalPortId: PortId;
+    }> = [];
+
+    for (const link of d.links) {
+      const sourceNode = this.getNodeByPortId(d, link.sourcePortId);
+      const targetNode = this.getNodeByPortId(d, link.targetPortId);
+      
+      const sourceInGroup = sourceNode && childNodeIdSet.has(sourceNode.id);
+      const targetInGroup = targetNode && childNodeIdSet.has(targetNode.id);
+
+      if (sourceInGroup && targetInGroup) {
+        // Internal link
+        internalLinkIds.push(link.id);
+      } else if (sourceInGroup && !targetInGroup) {
+        // Outgoing link
+        externalLinks.push({
+          link,
+          isOutgoing: true,
+          childPortId: link.sourcePortId,
+          externalPortId: link.targetPortId,
+        });
+      } else if (!sourceInGroup && targetInGroup) {
+        // Incoming link
+        externalLinks.push({
+          link,
+          isOutgoing: false,
+          childPortId: link.targetPortId,
+          externalPortId: link.sourcePortId,
+        });
+      }
+    }
+
+    groupNode.childLinkIds = new Set(internalLinkIds);
+
+    // Store child nodes and links in the group for later restoration
+    for (const node of selectedNodes) {
+      groupNode.childNodes.set(node.id, node);
+    }
+    for (const linkId of internalLinkIds) {
+      const link = d.getLink(linkId);
+      if (link) {
+        groupNode.childLinks.set(linkId, link);
+      }
+    }
+
+    // Create external ports on the group and reconnect links
+    const portMap = new Map<PortId, PortId>(); // child port -> group port
+    let portCounter = 0;
+
+    for (const { link, isOutgoing, childPortId } of externalLinks) {
+      // Check if we already created a port for this child port
+      let groupPortId = portMap.get(childPortId);
+      
+      if (!groupPortId) {
+        // Create new external port on group
+        portCounter++;
+        groupPortId = `${groupId}-ext-${childPortId}` as PortId;
+        portMap.set(childPortId, groupPortId);
+
+        // Determine port side based on child node position relative to group
+        const childNode = this.getNodeByPortId(d, childPortId);
+        let side: PortSide = 'right';
+        let offset = groupHeight / 2;
+
+        if (childNode) {
+          const childCenterX = childNode.x + childNode.width / 2;
+          const childCenterY = childNode.y + childNode.height / 2;
+          const groupCenterX = groupX + groupWidth / 2;
+          const groupCenterY = groupY + groupHeight / 2;
+
+          // Determine which side of the group the port should be on
+          const dx = childCenterX - groupCenterX;
+          const dy = childCenterY - groupCenterY;
+
+          if (Math.abs(dx) > Math.abs(dy)) {
+            side = dx > 0 ? 'right' : 'left';
+            offset = childCenterY - groupY;
+          } else {
+            side = dy > 0 ? 'bottom' : 'top';
+            offset = childCenterX - groupX;
+          }
+        }
+
+        const port = new Port({
+          id: groupPortId,
+          nodeId: groupId,
+          side,
+          offset,
+          type: isOutgoing ? 'output' : 'input',
+        });
+        groupNode.addPort(port);
+      }
+
+      // Reconnect the link: remove old and add new with group port
+      d.removeLink(link.id);
+      const newLink = new Link({
+        id: link.id,
+        sourcePortId: isOutgoing ? groupPortId : link.sourcePortId,
+        targetPortId: isOutgoing ? link.targetPortId : groupPortId,
+        points: link.points.map((p) => ({ x: p.x, y: p.y })),
+        routing: link.routing,
+      });
+      d.addLink(newLink);
+    }
+
+    // Remove child nodes from diagram (they're now inside the group)
+    for (const nodeId of selectedNodeIds) {
+      d.removeNode(nodeId);
+    }
+
+    // Add group node to diagram
+    d.addNode(groupNode);
+
+    // Update scale for preview
+    groupNode.updateScale();
+
+    // Select the new group
+    this.state.clearSelection();
+    this.state.setNodeSelection(new Set([groupId]));
+    this.state.setDiagram(d, true);
+
+    return true;
+  }
+
+  /**
+   * Ungroup a GroupNode, restoring its child nodes and links.
+   * Reconnects external links back to original child ports.
+   * Pushes undo before ungrouping.
+   */
+  ungroupNode(groupId: NodeId): boolean {
+    const d = this.state.getDiagram();
+    const groupNode = d?.getNode(groupId);
+    if (!d || !groupNode || !(groupNode instanceof GroupNode)) return false;
+
+    this.undoRedo.pushState();
+
+    // Restore child nodes with their original positions
+    const restoredNodeIds: NodeId[] = [];
+    for (const childNodeId of groupNode.childNodeIds) {
+      const storedNode = groupNode.getChildNode(childNodeId);
+      const originalPos = groupNode.getOriginalPosition(childNodeId);
+      
+      if (storedNode && originalPos) {
+        // Restore the original node with its original position
+        storedNode.setPosition(originalPos.x, originalPos.y);
+        d.addNode(storedNode);
+        restoredNodeIds.push(childNodeId);
+      }
+    }
+
+    // Restore internal links
+    for (const childLinkId of groupNode.childLinkIds) {
+      const storedLink = groupNode.getChildLink(childLinkId);
+      if (storedLink) {
+        d.addLink(storedLink);
+      }
+    }
+
+    // Reconnect external links back to child ports
+    const portMap = new Map<PortId, PortId>(); // group port -> child port
+    for (const port of groupNode.ports) {
+      // Extract child port ID from group port ID (format: "g1-ext-n2-out")
+      const match = port.id.match(/-ext-(.+)$/);
+      if (match) {
+        portMap.set(port.id, match[1] as PortId);
+      }
+    }
+
+    // Reconnect external links: replace with new links pointing to child ports
+    const linksToUpdate = d.links.filter(
+      (l) => portMap.has(l.sourcePortId) || portMap.has(l.targetPortId)
+    );
+    for (const link of linksToUpdate) {
+      const childSourcePortId = portMap.get(link.sourcePortId);
+      const childTargetPortId = portMap.get(link.targetPortId);
+      if (!childSourcePortId && !childTargetPortId) continue;
+
+      d.removeLink(link.id);
+      const newLink = new Link({
+        id: link.id,
+        sourcePortId: childSourcePortId ?? link.sourcePortId,
+        targetPortId: childTargetPortId ?? link.targetPortId,
+        points: link.points.map((p) => ({ x: p.x, y: p.y })),
+        routing: link.routing,
+      });
+      d.addLink(newLink);
+    }
+
+    // Remove the group node
+    d.removeNode(groupId);
+
+    // Select the restored nodes
+    this.state.clearSelection();
+    this.state.setNodeSelection(new Set(restoredNodeIds));
+    this.state.setDiagram(d, true);
+
+    return true;
+  }
+
+  /**
+   * Resize a group node to new dimensions.
+   * Updates scale factor for preview content.
+   * Does not push undo (caller should push once at resize start).
+   */
+  resizeGroupNode(groupId: NodeId, newWidth: number, newHeight: number): void {
+    const d = this.state.getDiagram();
+    const groupNode = d?.getNode(groupId);
+    if (!d || !groupNode || !(groupNode instanceof GroupNode)) return;
+
+    // Update dimensions
+    groupNode.width = Math.max(newWidth, 100); // Minimum width
+    groupNode.height = Math.max(newHeight, 80); // Minimum height
+
+    // Recalculate scale for preview
+    groupNode.updateScale();
+
+    // Reposition ports proportionally
+    // (Ports stay at their relative positions on the edges)
+
+    this.state.incrementRenderTick();
+  }
+
+  /** Helper to find node by port ID. */
+  private getNodeByPortId(diagram: Diagram, portId: PortId): Node | undefined {
+    for (const node of diagram.nodes) {
+      if (node.getPort(portId)) return node;
+    }
+    return undefined;
   }
 }

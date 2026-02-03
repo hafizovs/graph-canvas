@@ -57,6 +57,40 @@
   <button
     type="button"
     class="toolbar-btn"
+    [disabled]="!canGroup()"
+    (click)="onGroup()"
+    title="Group selected nodes (Ctrl+G)"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="8" height="8" rx="1" />
+      <rect x="13" y="3" width="8" height="8" rx="1" />
+      <rect x="3" y="13" width="8" height="8" rx="1" />
+      <rect x="13" y="13" width="8" height="8" rx="1" />
+      <rect x="1" y="1" width="22" height="22" rx="2" stroke-dasharray="3,3" />
+    </svg>
+    <span>Group</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canUngroup()"
+    (click)="onUngroup()"
+    title="Ungroup (Ctrl+Shift+G)"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="3" width="8" height="8" rx="1" />
+      <rect x="13" y="3" width="8" height="8" rx="1" />
+      <rect x="3" y="13" width="8" height="8" rx="1" />
+      <rect x="13" y="13" width="8" height="8" rx="1" />
+      <line x1="2" y1="2" x2="22" y2="22" stroke-width="2.5" />
+      <line x1="22" y1="2" x2="2" y2="22" stroke-width="2.5" />
+    </svg>
+    <span>Ungroup</span>
+  </button>
+  <span class="toolbar-sep" aria-hidden="true"></span>
+  <button
+    type="button"
+    class="toolbar-btn"
     [disabled]="disabled()"
     (click)="onZoomIn()"
     title="Zoom in"

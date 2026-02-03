@@ -1,0 +1,105 @@
+<!-- Group container rectangle -->
+<svg:rect
+  class="group-container"
+  [class.group-selected]="selected()"
+  [attr.width]="node().width"
+  [attr.height]="node().height"
+  rx="8"
+  ry="8"
+/>
+
+<!-- Group label -->
+<svg:text
+  class="group-label"
+  [attr.x]="node().width / 2"
+  [attr.y]="20"
+  dominant-baseline="middle"
+  text-anchor="middle"
+>
+  {{ node().label }}
+</svg:text>
+
+<!-- Preview container with clipping -->
+<svg:defs>
+  <svg:clipPath [attr.id]="'clip-' + node().id">
+    <svg:rect
+      [attr.x]="20"
+      [attr.y]="30"
+      [attr.width]="node().width - 40"
+      [attr.height]="node().height - 50"
+      rx="4"
+    />
+  </svg:clipPath>
+</svg:defs>
+
+<!-- Preview content (scaled child nodes) -->
+<svg:g
+  class="group-preview"
+  [attr.clip-path]="'url(#clip-' + node().id + ')'"
+  [attr.transform]="getPreviewTransform()"
+>
+  @for (childNode of getChildNodes(); track childNode.id) {
+    <svg:g [attr.transform]="'translate(' + childNode.x + ',' + childNode.y + ')'">
+      <!-- Simple rectangle representation of child nodes -->
+      <svg:rect
+        class="preview-node"
+        [attr.width]="childNode.width"
+        [attr.height]="childNode.height"
+        rx="4"
+      />
+      <svg:text
+        class="preview-label"
+        [attr.x]="childNode.width / 2"
+        [attr.y]="childNode.height / 2"
+        dominant-baseline="middle"
+        text-anchor="middle"
+      >
+        {{ childNode.label }}
+      </svg:text>
+    </svg:g>
+  }
+</svg:g>
+
+<!-- External ports -->
+@for (port of node().ports; track port.id) {
+  @let pos = getPortPosition(port);
+  <svg:g class="group-port-container">
+    <svg:circle
+      class="group-port"
+      [class.port-input]="port.type === 'input'"
+      [class.port-output]="port.type === 'output'"
+      [attr.cx]="pos.x"
+      [attr.cy]="pos.y"
+      [attr.r]="8"
+      [attr.data-port-id]="port.id"
+      [attr.data-port-type]="port.type"
+      [attr.data-node-id]="node().id"
+      (pointerdown)="onPortPointerDown(port, $event)"
+    />
+    <svg:text
+      class="group-port-label"
+      [attr.x]="pos.x + (port.type === 'output' ? 15 : -15)"
+      [attr.y]="pos.y"
+      [attr.text-anchor]="port.type === 'output' ? 'start' : 'end'"
+      dominant-baseline="middle"
+    >
+      {{ getPortLabel(port) }}
+    </svg:text>
+  </svg:g>
+}
+
+<!-- Resize handles (only shown when selected) -->
+@if (selected()) {
+  @for (handle of getResizeHandles(); track handle.handle) {
+    <svg:rect
+      class="resize-handle"
+      [attr.x]="handle.x"
+      [attr.y]="handle.y"
+      [attr.width]="8"
+      [attr.height]="8"
+      [attr.data-resize-handle]="handle.handle"
+      [style.cursor]="handle.cursor"
+      (pointerdown)="onResizeHandlePointerDown(handle.handle, $event)"
+    />
+  }
+}
