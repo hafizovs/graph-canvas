@@ -32,7 +32,10 @@ import type {
 } from './graph-group-node/graph-group-node.component';
 import type { Link, Node } from '../../../graph-core';
 import type { LinkId, NodeId, PortId } from '../../../graph-core';
-import { GraphEditorStateService } from './services/graph-editor-state.service';
+import {
+  GraphEditorStateService,
+  type SelectionRect,
+} from './services/graph-editor-state.service';
 import { GraphUndoRedoService } from './services/graph-undo-redo.service';
 import { GraphOperationsService } from './services/graph-operations.service';
 import { GraphLinkGeometryService } from './services/graph-link-geometry.service';
@@ -390,12 +393,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
     if (this._rubberBand && svg) {
       const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
-      this.state.setSelectionRect({
+      const rect: SelectionRect = {
         x1: this._rubberBand.x1,
         y1: this._rubberBand.y1,
         x2: pt.x,
         y2: pt.y,
-      });
+      };
+      this.state.setSelectionRect(rect);
+      this.updateSelectionForRect(rect);
     }
     if (this._draggingWaypoint && svg) {
       const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
@@ -418,7 +423,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     if (this._rubberBand) {
       this._rubberBand.target.releasePointerCapture?.(this._rubberBand.pointerId);
       const rect = this.state.selectionRect();
-      if (rect) this.state.selectNodesInRect(rect);
+      if (rect) {
+        this.updateSelectionForRect(rect);
+        this.state.setSelectionRect(null);
+      }
       this._rubberBand = null;
       return;
     }
@@ -785,6 +793,51 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       width: Math.abs(r.x2 - r.x1),
       height: Math.abs(r.y2 - r.y1),
     };
+  }
+
+  /**
+   * Get node and link IDs that intersect the selection rectangle.
+   * Nodes: rect intersection. Links: any path point inside rect.
+   */
+  private getNodesAndLinksInRect(rect: SelectionRect): {
+    nodeIds: Set<NodeId>;
+    linkIds: Set<LinkId>;
+  } {
+    const d = this.state.getDiagram();
+    const nodeIds = new Set<NodeId>();
+    const linkIds = new Set<LinkId>();
+    if (!d) return { nodeIds, linkIds };
+
+    const xMin = Math.min(rect.x1, rect.x2);
+    const xMax = Math.max(rect.x1, rect.x2);
+    const yMin = Math.min(rect.y1, rect.y2);
+    const yMax = Math.max(rect.y1, rect.y2);
+
+    for (const node of d.nodes) {
+      const r = node.getRect();
+      const intersects =
+        r.x + r.width >= xMin &&
+        r.x <= xMax &&
+        r.y + r.height >= yMin &&
+        r.y <= yMax;
+      if (intersects) nodeIds.add(node.id);
+    }
+
+    for (const link of d.links) {
+      const pts = this.linkGeometry.getPathPoints(link, d);
+      const anyInside = pts.some(
+        (p) => p.x >= xMin && p.x <= xMax && p.y >= yMin && p.y <= yMax
+      );
+      if (anyInside) linkIds.add(link.id);
+    }
+
+    return { nodeIds, linkIds };
+  }
+
+  /** Update node and link selection to match what intersects the rect (live during rubber-band). */
+  private updateSelectionForRect(rect: SelectionRect): void {
+    const { nodeIds, linkIds } = this.getNodesAndLinksInRect(rect);
+    this.state.setNodeAndLinkSelection(nodeIds, linkIds);
   }
 
   /** Container size for fitToView/zoomToSelection. */

@@ -164,6 +164,12 @@ export class GraphEditorStateService {
     this.selectedNodeIds.set(new Set());
   }
 
+  /** Set both node and link selection at once (e.g. rubber-band selection). */
+  setNodeAndLinkSelection(nodeIds: Set<NodeId>, linkIds: Set<LinkId>): void {
+    this.selectedNodeIds.set(nodeIds);
+    this.selectedLinkIds.set(linkIds);
+  }
+
   /** Toggle one node in selection (Shift+click); clear link selection. */
   toggleNodeSelection(nodeId: NodeId): void {
     const next = new Set(this.selectedNodeIds());
