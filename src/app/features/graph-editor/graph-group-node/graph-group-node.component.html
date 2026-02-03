@@ -47,14 +47,91 @@
     </svg:g>
   } @else {
     <svg:g [attr.transform]="getPreviewTransform()">
+      <!-- Links first (behind nodes) -->
+      @for (link of getChildLinks(); track link.id) {
+        <svg:path
+          class="preview-link"
+          [attr.d]="getLinkPathD(link)"
+          fill="none"
+        />
+      }
+      <!-- Nodes with original shapes -->
       @for (childNode of getChildNodes(); track childNode.id) {
         <svg:g [attr.transform]="'translate(' + childNode.x + ',' + childNode.y + ')'">
-          <svg:rect
-            class="preview-node"
-            [attr.width]="childNode.width"
-            [attr.height]="childNode.height"
-            rx="4"
-          />
+          @switch (childNode.shape) {
+            @case ('roundedRect') {
+              <svg:rect
+                class="preview-node"
+                [attr.width]="childNode.width"
+                [attr.height]="childNode.height"
+                [attr.rx]="childNode.width / 4"
+                [attr.ry]="childNode.height / 4"
+              />
+            }
+            @case ('circle') {
+              <svg:ellipse
+                class="preview-node"
+                [attr.cx]="childNode.width / 2"
+                [attr.cy]="childNode.height / 2"
+                [attr.rx]="childNode.width / 2"
+                [attr.ry]="childNode.height / 2"
+              />
+            }
+            @case ('ellipse') {
+              <svg:ellipse
+                class="preview-node"
+                [attr.cx]="childNode.width / 2"
+                [attr.cy]="childNode.height / 2"
+                [attr.rx]="childNode.width / 2"
+                [attr.ry]="childNode.height / 2"
+              />
+            }
+            @case ('diamond') {
+              <svg:polygon
+                class="preview-node"
+                [attr.points]="getPreviewShapePoints('diamond', childNode.width, childNode.height)"
+              />
+            }
+            @case ('triangle') {
+              <svg:polygon
+                class="preview-node"
+                [attr.points]="getPreviewShapePoints('triangle', childNode.width, childNode.height)"
+              />
+            }
+            @case ('hexagon') {
+              <svg:polygon
+                class="preview-node"
+                [attr.points]="getPreviewShapePoints('hexagon', childNode.width, childNode.height)"
+              />
+            }
+            @case ('parallelogram') {
+              <svg:polygon
+                class="preview-node"
+                [attr.points]="getPreviewShapePoints('parallelogram', childNode.width, childNode.height)"
+              />
+            }
+            @case ('pentagon') {
+              <svg:polygon
+                class="preview-node"
+                [attr.points]="getPreviewShapePoints('pentagon', childNode.width, childNode.height)"
+              />
+            }
+            @case ('cross') {
+              <svg:path
+                class="preview-node"
+                [attr.d]="getPreviewShapePath('cross', childNode.width, childNode.height)"
+              />
+            }
+            @default {
+              <svg:rect
+                class="preview-node"
+                [attr.width]="childNode.width"
+                [attr.height]="childNode.height"
+                rx="6"
+                ry="6"
+              />
+            }
+          }
           <svg:text
             class="preview-label"
             [attr.x]="childNode.width / 2"

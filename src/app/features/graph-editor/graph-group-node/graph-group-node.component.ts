@@ -6,7 +6,8 @@ import {
   computed,
   NO_ERRORS_SCHEMA,
 } from '@angular/core';
-import type { GroupNode, Port, Diagram } from '../../../../graph-core';
+import type { GroupNode, Port, Diagram, Link, Node } from '../../../../graph-core';
+import type { NodeShape } from '../../../../graph-core';
 
 /** Emitted when user interacts with the group node body. */
 export interface GroupNodePointerEvent {
@@ -143,10 +144,74 @@ export class GraphGroupNodeComponent {
   }
 
   /** Get child nodes for preview rendering. */
-  protected getChildNodes() {
+  protected getChildNodes(): Node[] {
+    return this.node().getStoredChildNodes();
+  }
+
+  /** Get child links for preview rendering (internal links only). */
+  protected getChildLinks(): Link[] {
+    return this.node().getStoredChildLinks();
+  }
+
+  /** Build SVG path d for a link in preview (content coordinates). */
+  protected getLinkPathD(link: Link): string {
     const groupNode = this.node();
-    // Return stored child nodes for preview (they're not in the diagram)
-    return groupNode.getStoredChildNodes();
+    const children = groupNode.getStoredChildNodes();
+    const getPortPos = (portId: string): { x: number; y: number } | null => {
+      for (const n of children) {
+        const port = n.getPort(portId);
+        if (!port) continue;
+        const pos = groupNode.getOriginalPosition(n.id) ?? { x: n.x, y: n.y };
+        const rect = { x: pos.x, y: pos.y, width: n.width, height: n.height };
+        const p = port.getAbsolutePosition(rect);
+        return { x: p.x, y: p.y };
+      }
+      return null;
+    };
+    const source = getPortPos(link.sourcePortId);
+    const target = getPortPos(link.targetPortId);
+    if (!source || !target) return '';
+
+    const pts: Array<{ x: number; y: number }> = [source];
+    for (const p of link.points) {
+      pts.push({ x: p.x, y: p.y });
+    }
+    pts.push(target);
+
+    const parts = [`M ${pts[0].x} ${pts[0].y}`];
+    for (let i = 1; i < pts.length; i++) {
+      parts.push(`L ${pts[i].x} ${pts[i].y}`);
+    }
+    return parts.join(' ');
+  }
+
+  /** Shape points/path for preview node (same logic as graph-node). */
+  protected getPreviewShapePoints(shape: NodeShape, w: number, h: number): string {
+    switch (shape) {
+      case 'diamond':
+        return `${w / 2},0 ${w},${h / 2} ${w / 2},${h} 0,${h / 2}`;
+      case 'triangle':
+        return `${w / 2},0 ${w},${h} 0,${h}`;
+      case 'hexagon':
+        return `${w / 2},0 ${w},${h / 4} ${w},${(3 * h) / 4} ${w / 2},${h} 0,${(3 * h) / 4} 0,${h / 4}`;
+      case 'parallelogram': {
+        const s = w * 0.2;
+        return `${s},0 ${w},0 ${w - s},${h} 0,${h}`;
+      }
+      case 'pentagon':
+        return `${w / 2},0 ${w},${h * 0.4} ${w * 0.8},${h} ${w * 0.2},${h} 0,${h * 0.4}`;
+      default:
+        return '';
+    }
+  }
+
+  protected getPreviewShapePath(shape: NodeShape, w: number, h: number): string {
+    if (shape !== 'cross') return '';
+    const vx1 = w * 0.4;
+    const vx2 = w * 0.6;
+    const hy1 = h * 0.4;
+    const hy2 = h * 0.6;
+    return `M ${vx1} 0 L ${vx2} 0 L ${vx2} ${h} L ${vx1} ${h} Z M 0 ${hy1} L ${w} ${hy1} L ${w} ${hy2} L 0 ${hy2} Z`;
   }
 
   /** Preview area: padding and vertical space for label. */

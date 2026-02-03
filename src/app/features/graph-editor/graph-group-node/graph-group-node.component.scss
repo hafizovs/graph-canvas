@@ -38,6 +38,12 @@
   /* No transition so preview transform updates immediately during resize */
 }
 
+.preview-link {
+  stroke: var(--preview-link-stroke, #7ab8d9);
+  stroke-width: 1.5;
+  opacity: 0.85;
+}
+
 .group-preview-placeholder {
   pointer-events: none;
 }
