@@ -87,8 +87,17 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Initial snap-to-grid from config (input). */
   readonly snapToGrid = input<boolean>(true);
 
-  protected readonly draggingFromPalette = signal<{ shape: NodeShape; pointerId: number } | null>(null);
-  protected readonly paletteDropPreview = signal<{ x: number; y: number; shape: NodeShape } | null>(null);
+  protected readonly draggingFromPalette = signal<{
+    shape: NodeShape;
+    pointerId: number;
+    customShapeId?: string;
+  } | null>(null);
+  protected readonly paletteDropPreview = signal<{
+    x: number;
+    y: number;
+    shape: NodeShape;
+    customShapeId?: string;
+  } | null>(null);
   /** Node context menu position (client coordinates); null when closed. */
   protected readonly nodeContextMenuPosition = signal<{ x: number; y: number } | null>(null);
 
@@ -238,8 +247,16 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   /** Start drag from palette; capture pointer and listen for move/up on document. */
-  protected onPaletteShapeDragStart(payload: { shape: NodeShape; pointerId: number }): void {
-    this.draggingFromPalette.set({ shape: payload.shape, pointerId: payload.pointerId });
+  protected onPaletteShapeDragStart(payload: {
+    shape: NodeShape;
+    pointerId: number;
+    customShapeId?: string;
+  }): void {
+    this.draggingFromPalette.set({
+      shape: payload.shape,
+      pointerId: payload.pointerId,
+      customShapeId: payload.customShapeId,
+    });
     document.addEventListener('pointermove', this._palettePointerMove);
     document.addEventListener('pointerup', this._palettePointerUp);
   }
@@ -255,7 +272,12 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const { x, y } = this.state.snapToGridEnabled()
         ? this.coordinate.snapToGrid(pt.x, pt.y)
         : { x: pt.x, y: pt.y };
-      this.paletteDropPreview.set({ x, y, shape: drag.shape });
+      this.paletteDropPreview.set({
+        x,
+        y,
+        shape: drag.shape,
+        customShapeId: drag.customShapeId,
+      });
     } else {
       this.paletteDropPreview.set(null);
     }
@@ -268,7 +290,12 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     document.removeEventListener('pointerup', this._palettePointerUp);
     const preview = this.paletteDropPreview();
     if (preview) {
-      this.operations.addNodeFromPalette(preview.shape, preview.x, preview.y);
+      this.operations.addNodeFromPalette(
+        preview.shape,
+        preview.x,
+        preview.y,
+        preview.customShapeId
+      );
     }
     this.draggingFromPalette.set(null);
     this.paletteDropPreview.set(null);

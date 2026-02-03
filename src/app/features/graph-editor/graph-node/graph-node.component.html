@@ -71,6 +71,26 @@
       [attr.d]="getCrossPath()"
     />
   }
+  @case ('custom') {
+    @if (node().customShapeId) {
+      <svg:image
+        class="node-shape node-custom"
+        [class.node-selected]="selected()"
+        [attr.href]="getCustomShapeHref()"
+        [attr.width]="node().width"
+        [attr.height]="node().height"
+      />
+    } @else {
+      <svg:rect
+        class="node-shape node-rect"
+        [class.node-selected]="selected()"
+        [attr.width]="node().width"
+        [attr.height]="node().height"
+        rx="6"
+        ry="6"
+      />
+    }
+  }
   @default {
     <svg:rect
       class="node-shape node-rect"

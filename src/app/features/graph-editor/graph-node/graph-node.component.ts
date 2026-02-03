@@ -144,4 +144,9 @@ export class GraphNodeComponent {
     const hy2 = h * 0.6;
     return `M ${vx1} 0 L ${vx2} 0 L ${vx2} ${h} L ${vx1} ${h} Z M 0 ${hy1} L ${w} ${hy1} L ${w} ${hy2} L 0 ${hy2} Z`;
   }
+
+  protected getCustomShapeHref(): string {
+    const id = this.node().customShapeId;
+    return id != null ? `/assets/${id}` : '';
+  }
 }

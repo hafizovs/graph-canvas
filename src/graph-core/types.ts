@@ -42,7 +42,8 @@ export type NodeShape =
   | 'hexagon'
   | 'parallelogram'
   | 'pentagon'
-  | 'cross';
+  | 'cross'
+  | 'custom';
 
 /** Type of node: regular node or group container. */
 export type NodeType = 'regular' | 'group';

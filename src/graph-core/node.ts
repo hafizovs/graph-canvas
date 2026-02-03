@@ -13,6 +13,7 @@ export interface NodeConfig {
   shape?: NodeShape;
   rotation?: number;
   nodeType?: NodeType;
+  customShapeId?: string;
   ports?: Port[];
 }
 
@@ -29,6 +30,7 @@ export class Node implements NodeConfig {
   shape: NodeShape;
   rotation: number;
   nodeType: NodeType;
+  customShapeId?: string;
   private _ports: Map<PortId, Port> = new Map();
 
   constructor(config: NodeConfig) {
@@ -41,6 +43,7 @@ export class Node implements NodeConfig {
     this.shape = config.shape ?? 'rectangle';
     this.rotation = config.rotation ?? 0;
     this.nodeType = config.nodeType ?? 'regular';
+    this.customShapeId = config.customShapeId;
     for (const p of config.ports ?? []) {
       this._ports.set(p.id, p);
     }

@@ -122,6 +122,24 @@
                 [attr.d]="getPreviewShapePath('cross', childNode.width, childNode.height)"
               />
             }
+            @case ('custom') {
+              @if (childNode.customShapeId) {
+                <svg:image
+                  class="preview-node"
+                  [attr.href]="'/assets/' + childNode.customShapeId"
+                  [attr.width]="childNode.width"
+                  [attr.height]="childNode.height"
+                />
+              } @else {
+                <svg:rect
+                  class="preview-node"
+                  [attr.width]="childNode.width"
+                  [attr.height]="childNode.height"
+                  rx="6"
+                  ry="6"
+                />
+              }
+            }
             @default {
               <svg:rect
                 class="preview-node"

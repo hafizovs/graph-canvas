@@ -1,11 +1,11 @@
 <div class="palette">
   <h3 class="palette-title">Shapes</h3>
   <div class="palette-items">
-    @for (item of shapes; track item.shape) {
+    @for (item of builtinShapes; track item.shape) {
       <button
         type="button"
         class="palette-item"
-        (pointerdown)="onPointerDown(item.shape, $event)"
+        (pointerdown)="onBuiltinPointerDown(item.shape, $event)"
         [attr.title]="'Drag to canvas: ' + item.label"
       >
         <svg class="palette-preview" viewBox="0 0 36 28" width="36" height="28">
@@ -42,6 +42,29 @@
             }
           }
         </svg>
+        <span class="palette-label">{{ item.label }}</span>
+      </button>
+    }
+  </div>
+
+  <div class="palette-separator">
+    <span class="palette-section-title">Custom</span>
+  </div>
+  <div class="palette-items">
+    @for (item of customShapes; track item.assetId) {
+      <button
+        type="button"
+        class="palette-item"
+        (pointerdown)="onCustomPointerDown(item.assetId, $event)"
+        [attr.title]="'Drag to canvas: ' + item.label"
+      >
+        <img
+          class="palette-preview"
+          [src]="assetsBase + item.assetId"
+          width="36"
+          height="28"
+          [alt]="item.label"
+        />
         <span class="palette-label">{{ item.label }}</span>
       </button>
     }

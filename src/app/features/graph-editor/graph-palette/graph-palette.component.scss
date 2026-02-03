@@ -18,6 +18,20 @@
   border-bottom: 1px solid var(--palette-border, #ccc);
 }
 
+.palette-separator {
+  border-top: 1px solid var(--palette-border, #ccc);
+  margin-top: 4px;
+  padding: 8px 12px 4px;
+}
+
+.palette-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--palette-title-color, #666);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 .palette-items {
   display: flex;
   flex-direction: column;

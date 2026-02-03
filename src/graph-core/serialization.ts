@@ -27,6 +27,7 @@ export interface NodeDto {
   shape?: NodeShape;
   rotation?: number;
   nodeType?: NodeType;
+  customShapeId?: string;
   childNodeIds?: NodeId[];
   childLinkIds?: LinkId[];
   originalPositions?: Record<NodeId, { x: number; y: number }>;
@@ -65,6 +66,7 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
       label: node.label,
       shape: node.shape,
       rotation: node.rotation,
+      ...(node.customShapeId != null && { customShapeId: node.customShapeId }),
       ports: node.ports.map((p) => ({
         id: p.id,
         nodeId: p.nodeId,
@@ -166,6 +168,7 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
         shape: nd.shape,
         rotation: nd.rotation,
         nodeType: nd.nodeType,
+        customShapeId: nd.customShapeId,
         ports,
       });
     }

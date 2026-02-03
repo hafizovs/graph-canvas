@@ -86,7 +86,12 @@ export class GraphOperationsService {
    * Add a new node from the palette at the given SVG coordinates (snapped to grid).
    * Pushes undo state before adding.
    */
-  addNodeFromPalette(shape: NodeShape, svgX: number, svgY: number): void {
+  addNodeFromPalette(
+    shape: NodeShape,
+    svgX: number,
+    svgY: number,
+    customShapeId?: string
+  ): void {
     const d = this.state.getDiagram();
     if (!d) return;
     this.undoRedo.pushState();
@@ -103,6 +108,7 @@ export class GraphOperationsService {
       height: 60,
       label: `Node ${this.state.getNodeIdCounter()}`,
       shape,
+      ...(shape === 'custom' && customShapeId != null && { customShapeId }),
       ports: [],
     });
     node.addPort(

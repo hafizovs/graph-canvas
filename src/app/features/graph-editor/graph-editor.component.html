@@ -175,6 +175,18 @@
               @case ('cross') {
                 <path class="preview-shape" [attr.d]="getPreviewCrossPath()" />
               }
+              @case ('custom') {
+                @if (preview.customShapeId) {
+                  <image
+                    class="preview-shape"
+                    [attr.href]="'/assets/' + preview.customShapeId"
+                    width="120"
+                    height="60"
+                  />
+                } @else {
+                  <rect class="preview-shape" width="120" height="60" rx="6" ry="6" />
+                }
+              }
               @default {
                 <rect class="preview-shape" width="120" height="60" rx="6" ry="6" />
               }
