@@ -11,6 +11,7 @@ import {
   MOCK_DIAGRAM_CHAIN,
   MOCK_DIAGRAM_DIAMOND,
 } from '../../../../graph-core';
+import type { AlignMode } from '../services/graph-operations.service';
 
 /** Toolbar: add node, delete selection, load example/file/storage, save. Emits events; parent handles logic. */
 @Component({
@@ -29,6 +30,10 @@ export class GraphToolbarComponent {
   readonly canGroup = input<boolean>(false);
   /** True when can ungroup (1 group node selected). */
   readonly canUngroup = input<boolean>(false);
+  /** True when 2+ nodes selected (for align buttons). */
+  readonly canAlign = input<boolean>(false);
+  /** True when 3+ nodes selected (for distribute buttons). */
+  readonly canDistribute = input<boolean>(false);
   readonly snapToGridEnabled = input<boolean>(true);
 
   readonly addNode = output<void>();
@@ -46,6 +51,7 @@ export class GraphToolbarComponent {
   readonly saveRequest = output<void>();
   readonly loadFromFile = output<DiagramJson>();
   readonly loadFromStorage = output<void>();
+  readonly align = output<AlignMode>();
 
   /** Emit addNode. */
   protected onAddNode(): void {
@@ -75,6 +81,10 @@ export class GraphToolbarComponent {
   /** Emit ungroup. */
   protected onUngroup(): void {
     this.ungroup.emit();
+  }
+
+  protected onAlign(mode: AlignMode): void {
+    this.align.emit(mode);
   }
 
   protected onZoomIn(): void {

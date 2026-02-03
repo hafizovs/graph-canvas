@@ -57,6 +57,119 @@
   <button
     type="button"
     class="toolbar-btn"
+    [disabled]="!canAlign()"
+    (click)="onAlign('alignLeft')"
+    title="Align left"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="4" y="5" width="6" height="4" />
+      <rect x="4" y="11" width="10" height="4" />
+      <rect x="4" y="17" width="8" height="4" />
+    </svg>
+    <span>Align left</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canAlign()"
+    (click)="onAlign('alignCenterH')"
+    title="Align center (horizontal)"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="7" y="5" width="10" height="4" />
+      <rect x="5" y="11" width="14" height="4" />
+      <rect x="6" y="17" width="12" height="4" />
+    </svg>
+    <span>Align center</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canAlign()"
+    (click)="onAlign('alignRight')"
+    title="Align right"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="14" y="5" width="6" height="4" />
+      <rect x="10" y="11" width="10" height="4" />
+      <rect x="12" y="17" width="8" height="4" />
+    </svg>
+    <span>Align right</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canAlign()"
+    (click)="onAlign('alignTop')"
+    title="Align top"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="4" y="4" width="6" height="5" />
+      <rect x="12" y="4" width="8" height="3" />
+      <rect x="4" y="14" width="10" height="4" />
+    </svg>
+    <span>Align top</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canAlign()"
+    (click)="onAlign('alignMiddleV')"
+    title="Align middle (vertical)"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="4" y="6" width="6" height="5" />
+      <rect x="12" y="4" width="8" height="3" />
+      <rect x="4" y="14" width="10" height="4" />
+    </svg>
+    <span>Align middle</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canAlign()"
+    (click)="onAlign('alignBottom')"
+    title="Align bottom"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="4" y="15" width="6" height="5" />
+      <rect x="12" y="17" width="8" height="3" />
+      <rect x="4" y="16" width="10" height="4" />
+    </svg>
+    <span>Align bottom</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canDistribute()"
+    (click)="onAlign('distributeH')"
+    title="Distribute horizontally"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="3" y="8" width="4" height="8" />
+      <rect x="10" y="6" width="4" height="12" />
+      <rect x="17" y="7" width="4" height="10" />
+    </svg>
+    <span>Distribute H</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!canDistribute()"
+    (click)="onAlign('distributeV')"
+    title="Distribute vertically"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="6" y="3" width="12" height="4" />
+      <rect x="4" y="10" width="16" height="4" />
+      <rect x="7" y="17" width="10" height="4" />
+    </svg>
+    <span>Distribute V</span>
+  </button>
+  <span class="toolbar-sep" aria-hidden="true"></span>
+  <button
+    type="button"
+    class="toolbar-btn"
     [disabled]="!canGroup()"
     (click)="onGroup()"
     title="Group selected nodes (Ctrl+G)"

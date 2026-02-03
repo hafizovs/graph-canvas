@@ -37,7 +37,7 @@ import {
   type SelectionRect,
 } from './services/graph-editor-state.service';
 import { GraphUndoRedoService } from './services/graph-undo-redo.service';
-import { GraphOperationsService } from './services/graph-operations.service';
+import { GraphOperationsService, type AlignMode } from './services/graph-operations.service';
 import { GraphLinkGeometryService } from './services/graph-link-geometry.service';
 import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
@@ -637,6 +637,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Rotate selected nodes 90° counter-clockwise (toolbar / Shift+R). */
   protected onRotateCcw(): void {
     this.operations.rotateSelectedNodes(-90);
+  }
+
+  /** Align or distribute selected nodes (toolbar). */
+  protected onAlign(mode: AlignMode): void {
+    this.operations.alignSelectedNodes(mode);
   }
 
   /** Double-click on waypoint: remove it. Cancel any active drag of that waypoint. */

@@ -9,6 +9,7 @@
     (deleteSelection)="onDeleteSelection()"
     (rotateCw)="onRotateCw()"
     (rotateCcw)="onRotateCcw()"
+    (align)="onAlign($event)"
     (group)="onGroup()"
     (ungroup)="onUngroup()"
     (zoomIn)="onZoomIn()"
@@ -24,6 +25,8 @@
     [hasNodeSelection]="selectedNodeIds().size > 0"
     [canGroup]="canGroup()"
     [canUngroup]="canUngroup()"
+    [canAlign]="selectedNodeIds().size >= 2"
+    [canDistribute]="selectedNodeIds().size >= 3"
     [snapToGridEnabled]="snapToGridEnabled()"
   />
 
