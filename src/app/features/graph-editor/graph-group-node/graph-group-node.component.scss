@@ -12,6 +12,7 @@
   stroke-width: 2;
   stroke-dasharray: 5, 3;
   transition: filter 0.15s ease;
+  /* No transition on dimensions so resize updates immediately */
 
   :host:hover & {
     filter: brightness(0.98);
@@ -33,6 +34,11 @@
 }
 
 .group-preview {
+  pointer-events: none;
+  /* No transition so preview transform updates immediately during resize */
+}
+
+.group-preview-placeholder {
   pointer-events: none;
 }
 
@@ -81,16 +87,14 @@
   }
 }
 
+/* No transition on resize handles so they don't "run" during resize */
 .resize-handle {
   fill: var(--resize-handle-fill, #fff);
   stroke: var(--resize-handle-stroke, #0066cc);
   stroke-width: 2;
   cursor: pointer;
-  transition: all 0.15s ease;
 
   &:hover {
     fill: var(--resize-handle-hover-fill, #0066cc);
-    transform: scale(1.3);
-    transform-origin: center;
   }
 }

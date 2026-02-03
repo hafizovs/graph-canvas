@@ -125,11 +125,11 @@ export class GroupNode extends Node {
   }
 
   /**
-   * Calculate bounding box of all child nodes based on their original positions.
-   * Used for preview scaling calculations.
+   * Calculate bounding box of all child nodes using actual positions and dimensions.
+   * Used for preview scaling so the full picture fits.
    */
   getBounds(): Rect {
-    if (this.originalPositions.size === 0) {
+    if (this.childNodes.size === 0) {
       return { x: 0, y: 0, width: 0, height: 0 };
     }
 
@@ -138,12 +138,12 @@ export class GroupNode extends Node {
     let maxX = -Infinity;
     let maxY = -Infinity;
 
-    for (const pos of this.originalPositions.values()) {
+    for (const node of this.childNodes.values()) {
+      const pos = this.originalPositions.get(node.id) ?? { x: node.x, y: node.y };
       minX = Math.min(minX, pos.x);
       minY = Math.min(minY, pos.y);
-      // Assuming default node size for bounds calculation
-      maxX = Math.max(maxX, pos.x + 120);
-      maxY = Math.max(maxY, pos.y + 60);
+      maxX = Math.max(maxX, pos.x + node.width);
+      maxY = Math.max(maxY, pos.y + node.height);
     }
 
     return {
@@ -154,9 +154,12 @@ export class GroupNode extends Node {
     };
   }
 
+  /** Minimum scale below which we show a generic placeholder instead of detailed preview. */
+  static readonly MIN_PREVIEW_SCALE = 0.2;
+
   /**
-   * Calculate the scale factor for preview content based on group size.
-   * Content is scaled to fit within the group with padding.
+   * Calculate the scale factor for preview content: fit entire bounds in the preview area.
+   * Never scale up; if scale would be below MIN_PREVIEW_SCALE, we still return it (caller shows placeholder).
    */
   calculatePreviewScale(): number {
     const bounds = this.getBounds();
@@ -165,14 +168,21 @@ export class GroupNode extends Node {
     }
 
     const padding = 20;
+    const previewAreaY = 30;
+    const previewAreaHeight = this.height - 50;
     const availableWidth = this.width - 2 * padding;
-    const availableHeight = this.height - 2 * padding;
+    const availableHeight = Math.max(previewAreaHeight, 40);
 
     const scaleX = availableWidth / bounds.width;
     const scaleY = availableHeight / bounds.height;
 
-    // Never scale up, only down
+    // Fit entire picture; never scale up
     return Math.min(scaleX, scaleY, 1);
+  }
+
+  /** True when preview scale is below minimum and we should show generic placeholder. */
+  shouldShowPlaceholder(): boolean {
+    return this.scale < GroupNode.MIN_PREVIEW_SCALE && this.childNodes.size > 0;
   }
 
   /** Update scale factor (called after resize). */

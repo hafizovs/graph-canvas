@@ -149,18 +149,31 @@ export class GraphGroupNodeComponent {
     return groupNode.getStoredChildNodes();
   }
 
-  /** Calculate preview transform for child nodes. */
+  /** Preview area: padding and vertical space for label. */
+  private static readonly PREVIEW_PADDING = 20;
+  private static readonly PREVIEW_TOP = 30;
+  private static readonly PREVIEW_BOTTOM = 50;
+
+  /** Calculate preview transform: fit full bounds, centered in preview area. */
   protected getPreviewTransform(): string {
     const groupNode = this.node();
     const bounds = groupNode.getBounds();
     const scale = groupNode.scale;
-    const padding = 20;
+    const p = GraphGroupNodeComponent.PREVIEW_PADDING;
+    const top = GraphGroupNodeComponent.PREVIEW_TOP;
+    const availableWidth = groupNode.width - 2 * p;
+    const availableHeight = groupNode.height - GraphGroupNodeComponent.PREVIEW_BOTTOM - top;
 
-    // Center the preview within the group
-    const offsetX = padding + (groupNode.width - 2 * padding - bounds.width * scale) / 2 - bounds.x * scale;
-    const offsetY = padding + (groupNode.height - 2 * padding - bounds.height * scale) / 2 - bounds.y * scale;
+    // Center scaled content in preview area
+    const offsetX = p + (availableWidth - bounds.width * scale) / 2 - bounds.x * scale;
+    const offsetY = top + (availableHeight - bounds.height * scale) / 2 - bounds.y * scale;
 
     return `translate(${offsetX}, ${offsetY}) scale(${scale})`;
+  }
+
+  /** Whether to show generic placeholder instead of detailed preview (scale too small). */
+  protected showPlaceholder(): boolean {
+    return this.node().shouldShowPlaceholder();
   }
 
   /** Get label for external port (shows original port info). */

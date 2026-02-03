@@ -32,30 +32,40 @@
   </svg:clipPath>
 </svg:defs>
 
-<!-- Preview content (scaled child nodes) -->
+<!-- Preview: detailed (scaled child nodes) or generic placeholder -->
 <svg:g
   class="group-preview"
   [attr.clip-path]="'url(#clip-' + node().id + ')'"
-  [attr.transform]="getPreviewTransform()"
 >
-  @for (childNode of getChildNodes(); track childNode.id) {
-    <svg:g [attr.transform]="'translate(' + childNode.x + ',' + childNode.y + ')'">
-      <!-- Simple rectangle representation of child nodes -->
-      <svg:rect
-        class="preview-node"
-        [attr.width]="childNode.width"
-        [attr.height]="childNode.height"
-        rx="4"
-      />
-      <svg:text
-        class="preview-label"
-        [attr.x]="childNode.width / 2"
-        [attr.y]="childNode.height / 2"
-        dominant-baseline="middle"
-        text-anchor="middle"
-      >
-        {{ childNode.label }}
-      </svg:text>
+  @if (showPlaceholder()) {
+    <!-- Generic placeholder when scale is too small -->
+    <svg:g class="group-preview-placeholder" [attr.transform]="'translate(' + (node().width / 2 - 24) + ',' + (30 + (node().height - 50) / 2 - 24) + ')'">
+      <svg:rect x="0" y="0" width="12" height="12" rx="2" class="preview-node" />
+      <svg:rect x="14" y="0" width="12" height="12" rx="2" class="preview-node" />
+      <svg:rect x="0" y="14" width="12" height="12" rx="2" class="preview-node" />
+      <svg:rect x="14" y="14" width="12" height="12" rx="2" class="preview-node" />
+    </svg:g>
+  } @else {
+    <svg:g [attr.transform]="getPreviewTransform()">
+      @for (childNode of getChildNodes(); track childNode.id) {
+        <svg:g [attr.transform]="'translate(' + childNode.x + ',' + childNode.y + ')'">
+          <svg:rect
+            class="preview-node"
+            [attr.width]="childNode.width"
+            [attr.height]="childNode.height"
+            rx="4"
+          />
+          <svg:text
+            class="preview-label"
+            [attr.x]="childNode.width / 2"
+            [attr.y]="childNode.height / 2"
+            dominant-baseline="middle"
+            text-anchor="middle"
+          >
+            {{ childNode.label }}
+          </svg:text>
+        </svg:g>
+      }
     </svg:g>
   }
 </svg:g>
