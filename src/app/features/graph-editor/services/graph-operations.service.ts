@@ -472,7 +472,8 @@ export class GraphOperationsService {
 
   /**
    * Add a waypoint to a link at the given index. Pushes undo before adding.
-   * For orthogonal routing, snaps the point to keep segments H/V.
+   * For orthogonal routing, the rendered path is kept H/V by Link.buildPath() (corner insertion),
+   * so we do not force-snap the waypoint to a single corner here (keeps editing responsive).
    */
   addLinkWaypoint(linkId: LinkId, index: number, x: number, y: number): boolean {
     const d = this.state.getDiagram();
@@ -487,24 +488,6 @@ export class GraphOperationsService {
       const snapped = this.coordinate.snapToGrid(x, y);
       px = snapped.x;
       py = snapped.y;
-    }
-
-    if (link.routing === 'orthogonal') {
-      const source = d.getPortPosition(link.sourcePortId);
-      const target = d.getPortPosition(link.targetPortId);
-      if (source && target) {
-        const prev =
-          index <= 0 ? source : link.points[index - 1];
-        const next =
-          index >= link.points.length ? target : link.points[index];
-        const snapped = this.linkGeometry.snapToOrthogonal(
-          { x: px, y: py },
-          prev,
-          next
-        );
-        px = snapped.x;
-        py = snapped.y;
-      }
     }
 
     const pt = new Point(px, py);
@@ -527,23 +510,6 @@ export class GraphOperationsService {
       const snapped = this.coordinate.snapToGrid(x, y);
       px = snapped.x;
       py = snapped.y;
-    }
-
-    if (link.routing === 'orthogonal') {
-      const source = d.getPortPosition(link.sourcePortId);
-      const target = d.getPortPosition(link.targetPortId);
-      if (source && target) {
-        const prev = index <= 0 ? source : link.points[index - 1];
-        const next =
-          index >= link.points.length - 1 ? target : link.points[index + 1];
-        const snapped = this.linkGeometry.snapToOrthogonal(
-          { x: px, y: py },
-          prev,
-          next
-        );
-        px = snapped.x;
-        py = snapped.y;
-      }
     }
 
     link.points[index] = new Point(px, py);
