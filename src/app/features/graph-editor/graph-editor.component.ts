@@ -527,7 +527,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** SVG path d for the link preview line (orthogonal: horizontal then vertical from source to pointer). */
+  /** SVG path d for the link preview line (uses current default connector style). */
   protected getPreviewPathD(): string {
     const from = this.state.linkingFrom();
     const preview = this.state.linkingPreviewPoint();
@@ -539,6 +539,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     const sy = source.y;
     const px = preview.x;
     const py = preview.y;
+    if (this.state.defaultLinkRouting() === 'straight') {
+      return `M ${sx} ${sy} L ${px} ${py}`;
+    }
+    // orthogonal: horizontal then vertical from source to pointer
     return `M ${sx} ${sy} L ${px} ${sy} L ${px} ${py}`;
   }
 
