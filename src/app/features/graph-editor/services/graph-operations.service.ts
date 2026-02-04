@@ -33,7 +33,7 @@ export type { AlignMode };
  * {@link GraphEditorActionDispatcher}; return values and pre-checks (e.g. group delete
  * confirmation) are handled here for API compatibility with the component and resize service.
  */
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class GraphOperationsService {
   constructor(
     private readonly state: GraphEditorStateService,

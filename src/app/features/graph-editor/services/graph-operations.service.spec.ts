@@ -1,8 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { GraphEditorStateService } from './graph-editor-state.service';
 import { GraphUndoRedoService } from './graph-undo-redo.service';
 import { GraphOperationsService } from './graph-operations.service';
+import { GraphEditorActionDispatcher } from '../actions/action-dispatcher.service';
+import { GRAPH_EDITOR_CONFIG } from '../config/graph-editor-config';
+import { createDefaultConfig } from '../config/graph-editor-config';
 import { MOCK_DIAGRAM_CHAIN, MOCK_DIAGRAM_SINGLE_NODE } from '../../../../graph-core';
 import { GRID_STEP } from './graph-coordinate.service';
 
@@ -11,7 +15,13 @@ describe('GraphOperationsService', () => {
   let operations: GraphOperationsService;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [
+        { provide: GRAPH_EDITOR_CONFIG, useValue: signal(createDefaultConfig()) },
+        GraphEditorActionDispatcher,
+        GraphOperationsService,
+      ],
+    });
     state = TestBed.inject(GraphEditorStateService);
     const undoRedo = TestBed.inject(GraphUndoRedoService);
     operations = TestBed.inject(GraphOperationsService);

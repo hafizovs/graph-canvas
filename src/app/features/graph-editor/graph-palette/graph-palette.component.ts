@@ -1,5 +1,6 @@
-import { Component, ChangeDetectionStrategy, output } from '@angular/core';
+import { Component, ChangeDetectionStrategy, computed, input, output } from '@angular/core';
 import type { NodeShape } from '../../../../graph-core';
+import type { GraphEditorPaletteConfig } from '../config/graph-editor-config';
 
 export interface ShapeDragStartPayload {
   shape: NodeShape;
@@ -40,7 +41,17 @@ const CUSTOM_SHAPES: { assetId: string; label: string }[] = [
 export class GraphPaletteComponent {
   readonly shapeDragStart = output<ShapeDragStartPayload>();
 
-  protected readonly builtinShapes = BUILTIN_SHAPES;
+  /** Palette config; shapes: 'all' or array of NodeShape to show. */
+  readonly paletteConfig = input<GraphEditorPaletteConfig | undefined>(undefined);
+
+  protected readonly builtinShapes = computed(() => {
+    const cfg = this.paletteConfig();
+    const filter = cfg?.shapes;
+    if (!filter || filter === 'all') return BUILTIN_SHAPES;
+    const set = new Set(filter);
+    return BUILTIN_SHAPES.filter((item) => set.has(item.shape));
+  });
+
   protected readonly customShapes = CUSTOM_SHAPES;
 
   protected readonly assetsBase = '/assets/';

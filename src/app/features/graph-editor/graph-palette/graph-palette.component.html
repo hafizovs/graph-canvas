@@ -1,7 +1,7 @@
 <div class="palette">
   <h3 class="palette-title">Shapes</h3>
   <div class="palette-items">
-    @for (item of builtinShapes; track item.shape) {
+    @for (item of builtinShapes(); track item.shape) {
       <button
         type="button"
         class="palette-item"

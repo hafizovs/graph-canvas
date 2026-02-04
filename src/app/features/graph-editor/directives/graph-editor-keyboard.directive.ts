@@ -2,11 +2,13 @@ import {
   Directive,
   HostListener,
   inject,
+  input,
   output,
 } from '@angular/core';
 import { GraphEditorStateService } from '../services/graph-editor-state.service';
 import { GraphOperationsService } from '../services/graph-operations.service';
 import { GraphUndoRedoService } from '../services/graph-undo-redo.service';
+import type { GraphEditorKeyboardConfig } from '../config/graph-editor-config';
 
 /**
  * Handles document-level keyboard shortcuts for the graph editor.
@@ -25,6 +27,9 @@ export class GraphEditorKeyboardDirective {
   private readonly operations = inject(GraphOperationsService);
   private readonly undoRedo = inject(GraphUndoRedoService);
 
+  /** Keyboard config; when a flag is false, that shortcut is disabled. */
+  readonly keyboardConfig = input<GraphEditorKeyboardConfig | undefined>(undefined);
+
   /** Emitted when Escape is pressed (component should clear selected waypoint). */
   readonly escapeKey = output<void>();
   /** Emitted when Delete/Backspace is pressed (component handles waypoint vs selection). */
@@ -34,9 +39,14 @@ export class GraphEditorKeyboardDirective {
   /** Emitted when Ctrl+Shift+G / Cmd+Shift+G is pressed (component calls onUngroup). */
   readonly ungroupKey = output<void>();
 
+  private isEnabled(key: keyof GraphEditorKeyboardConfig): boolean {
+    const cfg = this.keyboardConfig();
+    return cfg?.[key] !== false;
+  }
+
   @HostListener('document:keyup', ['$event'])
   onKeyUp(event: KeyboardEvent): void {
-    if (event.key === ' ') {
+    if (event.key === ' ' && this.isEnabled('spacePan')) {
       this.state.setSpaceKeyDown(false);
     }
   }
@@ -47,32 +57,42 @@ export class GraphEditorKeyboardDirective {
     if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
 
     if (event.key === ' ') {
-      this.state.setSpaceKeyDown(true);
-      event.preventDefault();
+      if (this.isEnabled('spacePan')) {
+        this.state.setSpaceKeyDown(true);
+        event.preventDefault();
+      }
       return;
     }
     if (event.key === 'Escape') {
-      this.state.clearSelection();
-      this.escapeKey.emit();
+      if (this.isEnabled('escape')) {
+        this.state.clearSelection();
+        this.escapeKey.emit();
+      }
       return;
     }
     if (event.key === 'a' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      this.state.selectAllNodesAndLinks();
+      if (this.isEnabled('selectAll')) {
+        event.preventDefault();
+        this.state.selectAllNodesAndLinks();
+      }
       return;
     }
     if (event.key === 'c' && (event.ctrlKey || event.metaKey)) {
-      this.operations.copy();
+      if (this.isEnabled('copyPaste')) this.operations.copy();
       return;
     }
     if (event.key === 'v' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      this.operations.paste();
+      if (this.isEnabled('copyPaste')) {
+        event.preventDefault();
+        this.operations.paste();
+      }
       return;
     }
     if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
-      event.preventDefault();
-      this.undoRedo.undo();
+      if (this.isEnabled('undoRedo')) {
+        event.preventDefault();
+        this.undoRedo.undo();
+      }
       return;
     }
     if (
@@ -80,12 +100,14 @@ export class GraphEditorKeyboardDirective {
       (event.key === 'z' && event.ctrlKey && event.shiftKey) ||
       (event.key === 'z' && event.metaKey && event.shiftKey)
     ) {
-      event.preventDefault();
-      this.undoRedo.redo();
+      if (this.isEnabled('undoRedo')) {
+        event.preventDefault();
+        this.undoRedo.redo();
+      }
       return;
     }
     if (event.key === 'Delete' || event.key === 'Backspace') {
-      this.deleteKey.emit();
+      if (this.isEnabled('delete')) this.deleteKey.emit();
       return;
     }
     if (
@@ -94,18 +116,24 @@ export class GraphEditorKeyboardDirective {
       !event.metaKey &&
       this.state.selectedNodeIds().size > 0
     ) {
-      event.preventDefault();
-      this.operations.rotateSelectedNodes(event.shiftKey ? -90 : 90);
+      if (this.isEnabled('rotate')) {
+        event.preventDefault();
+        this.operations.rotateSelectedNodes(event.shiftKey ? -90 : 90);
+      }
       return;
     }
     if (event.key === 'g' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
-      event.preventDefault();
-      this.groupKey.emit();
+      if (this.isEnabled('groupUngroup')) {
+        event.preventDefault();
+        this.groupKey.emit();
+      }
       return;
     }
     if (event.key === 'G' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
-      event.preventDefault();
-      this.ungroupKey.emit();
+      if (this.isEnabled('groupUngroup')) {
+        event.preventDefault();
+        this.ungroupKey.emit();
+      }
       return;
     }
   }

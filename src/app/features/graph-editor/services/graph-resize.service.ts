@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { GroupNode } from '../../../../graph-core';
 import type { NodeId } from '../../../../graph-core';
 import { GraphEditorStateService } from './graph-editor-state.service';
 import { GraphOperationsService } from './graph-operations.service';
 import { GraphUndoRedoService } from './graph-undo-redo.service';
+import { GRAPH_EDITOR_CONFIG } from '../config/graph-editor-config';
 
 export type ResizeHandle = 'nw' | 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w';
 
@@ -22,9 +23,10 @@ interface ResizeState {
  * Service for handling node resize operations (primarily for GroupNodes).
  * Manages resize state and applies transformations based on handle dragging.
  */
-@Injectable({ providedIn: 'root' })
+@Injectable()
 export class GraphResizeService {
   private resizeState: ResizeState | null = null;
+  private readonly configSignal = inject(GRAPH_EDITOR_CONFIG, { optional: true });
 
   constructor(
     private state: GraphEditorStateService,
@@ -44,8 +46,10 @@ export class GraphResizeService {
     const node = d?.getNode(nodeId);
     if (!d || !node || !(node instanceof GroupNode)) return false;
 
-    // Push undo state at the start of resize
-    this.undoRedo.pushState();
+    const cfg = this.configSignal?.();
+    if (cfg?.undoRedo?.enabled !== false) {
+      this.undoRedo.pushState();
+    }
 
     this.resizeState = {
       nodeId,

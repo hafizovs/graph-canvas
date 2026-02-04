@@ -9,9 +9,10 @@ import {
   input,
   signal,
   effect,
+  computed,
 } from '@angular/core';
 import type { DiagramJson } from '../../../graph-core';
-import { MOCK_DIAGRAM_CHAIN, GroupNode } from '../../../graph-core';
+import { MOCK_DIAGRAM_CHAIN, MOCK_DIAGRAM_EMPTY, GroupNode } from '../../../graph-core';
 import type { NodeShape } from '../../../graph-core';
 import { GraphLinkComponent } from './graph-link/graph-link.component';
 import { GraphNodeComponent } from './graph-node/graph-node.component';
@@ -48,6 +49,9 @@ import type {
   SegmentMidpointPayload,
   WaypointPointerPayload,
 } from './graph-link/graph-link.component';
+import type { GraphEditorConfig } from './config/graph-editor-config';
+import { GRAPH_EDITOR_CONFIG, mergeWithDefaults } from './config/graph-editor-config';
+import { GraphEditorActionDispatcher } from './actions/action-dispatcher.service';
 
 /**
  * Main graph editor container. Renders the diagram (nodes, links, grid), coordinates state,
@@ -62,6 +66,7 @@ import type {
   selector: 'app-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  providers: [GraphEditorActionDispatcher, GraphOperationsService, GraphResizeService],
   imports: [
     GraphLinkComponent,
     GraphNodeComponent,
@@ -126,6 +131,17 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Initial snap-to-grid from config (input). */
   readonly snapToGrid = input<boolean>(true);
 
+  /** Editor configuration. Merged with defaults; toolbar.visible is false by default. */
+  readonly config = input<GraphEditorConfig | null | undefined>(null);
+
+  /** Injected by parent (e.g. EditorPageComponent) to avoid circular dependency. */
+  private readonly injectedConfigSignal = inject(GRAPH_EDITOR_CONFIG, { optional: true });
+
+  /** Effective config: from parent injector when provided, otherwise merged from config input. */
+  protected readonly effectiveConfig = this.injectedConfigSignal ?? computed(
+    () => mergeWithDefaults(this.config())
+  );
+
   protected readonly draggingFromPalette = signal<{
     shape: NodeShape;
     pointerId: number;
@@ -168,11 +184,18 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   private _segmentMovePointerMove = (e: PointerEvent) => this.onSegmentMovePointerMove(e);
   private _segmentMovePointerUp = (e: PointerEvent) => this.onSegmentMovePointerUp(e);
 
+  private pushUndoIfEnabled(): void {
+    const cfg = this.effectiveConfig();
+    if (cfg?.undoRedo?.enabled !== false) {
+      this.undoRedo.pushState();
+    }
+  }
+
   private onWaypointPointerMove(event: PointerEvent): void {
     if (!this._draggingWaypoint || event.pointerId !== this._draggingWaypoint.pointerId) return;
     if (!this._draggingWaypoint.pushedUndo) {
       this._draggingWaypoint.pushedUndo = true;
-      this.undoRedo.pushState();
+      this.pushUndoIfEnabled();
     }
     const svg = this.svgContainer?.nativeElement;
     if (!svg) return;
@@ -233,15 +256,33 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   constructor() {
     effect(() => {
-      this.state.setSnapToGridEnabled(this.snapToGrid());
+      const cfg = this.effectiveConfig();
+      this.state.setSnapToGridEnabled(cfg.snapToGrid ?? this.snapToGrid());
     });
   }
 
-  /** Load example diagram on init; attach wheel zoom (non-passive so preventDefault works). */
+  private interactionEnabled(key: keyof NonNullable<GraphEditorConfig['interactions']>): boolean {
+    return this.effectiveConfig().interactions?.[key] !== false;
+  }
+
+  /** Load diagram on init per config; attach wheel zoom (non-passive so preventDefault works). */
   ngAfterViewInit(): void {
-    this.loadDiagramFromJson(MOCK_DIAGRAM_CHAIN);
+    const cfg = this.effectiveConfig();
+    if (cfg.initialDiagram === null) {
+      this.loadDiagramFromJson(MOCK_DIAGRAM_EMPTY);
+    } else if (cfg.initialDiagram) {
+      this.loadDiagramFromJson(cfg.initialDiagram);
+    } else {
+      this.loadDiagramFromJson(MOCK_DIAGRAM_CHAIN);
+    }
     const el = this.svgContainer?.nativeElement;
     if (el) el.addEventListener('wheel', this._wheelHandler, { passive: false });
+  }
+
+  /** Storage key from config; null if localStorage disabled. */
+  private getStorageKey(): string | null {
+    const cfg = this.effectiveConfig();
+    return cfg.storageKey ?? null;
   }
 
   /** Load diagram from JSON without pushing undo (initial load or programmatic restore). */
@@ -251,13 +292,13 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Load example diagram; pushes undo so it can be undone. */
   protected onLoadExample(json: DiagramJson): void {
-    this.undoRedo.pushState();
+    this.pushUndoIfEnabled();
     this.undoRedo.restoreFromJson(json);
   }
 
   /** Load diagram from file; pushes undo. */
   protected onLoadFromFile(json: DiagramJson): void {
-    this.undoRedo.pushState();
+    this.pushUndoIfEnabled();
     this.undoRedo.restoreFromJson(json);
   }
 
@@ -267,8 +308,9 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     if (!d) return;
     const json = serializeDiagram(d);
     const str = JSON.stringify(json, null, 2);
+    const key = this.getStorageKey();
     try {
-      localStorage.setItem(GraphEditorComponent.STORAGE_KEY, str);
+      if (key) localStorage.setItem(key, str);
     } catch {
       // ignore quota errors
     }
@@ -283,12 +325,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Load diagram from localStorage; pushes undo. */
   protected onLoadFromStorage(): void {
+    const key = this.getStorageKey();
+    if (!key) return;
     try {
-      const str = localStorage.getItem(GraphEditorComponent.STORAGE_KEY);
+      const str = localStorage.getItem(key);
       if (!str) return;
       const json = JSON.parse(str) as DiagramJson;
       if (json && Array.isArray(json.nodes) && Array.isArray(json.links)) {
-        this.undoRedo.pushState();
+        this.pushUndoIfEnabled();
         this.undoRedo.restoreFromJson(json);
       }
     } catch {
@@ -372,6 +416,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Start pending drag or capture pointer for click. */
   protected onNodePointerDown(e: NodePointerEvent): void {
     if (this.state.linkingFrom()) return;
+    if (!this.interactionEnabled('nodeDrag')) return;
     const pt = this.coordinate.clientToSvg(
       this.svgContainer?.nativeElement,
       e.event.clientX,
@@ -395,8 +440,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     if (this._pendingDrag?.node === e.node) {
       const dx = pt.x - (e.node.x + this._pendingDrag.startX);
       const dy = pt.y - (e.node.y + this._pendingDrag.startY);
-      if (Math.sqrt(dx * dx + dy * dy) > GraphEditorComponent.DRAG_THRESHOLD_PX) {
-        this.undoRedo.pushState();
+      if (
+        this.interactionEnabled('nodeDrag') &&
+        Math.sqrt(dx * dx + dy * dy) > GraphEditorComponent.DRAG_THRESHOLD_PX
+      ) {
+        this.pushUndoIfEnabled();
         const d = this.state.getDiagram();
         const selectedIds = this.state.selectedNodeIds();
         const initialPositions = new Map<NodeId, { x: number; y: number }>();
@@ -449,6 +497,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Start link drag from output port; set linking state and preview point. */
   protected onPortPointerDown(e: PortPointerEvent): void {
     if (this.state.linkingFrom()) return;
+    if (!this.interactionEnabled('linkCreation')) return;
     if (e.port.type !== 'output') return;
     this.state.setLinkingFrom({
       portId: e.port.id,
@@ -580,9 +629,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Start waypoint drag; select this waypoint and ensure link is selected. Undo pushed on first move. */
   protected onWaypointPointerDown(payload: WaypointPointerPayload): void {
     if (this.state.linkingFrom()) return;
+    if (!this.interactionEnabled('linkWaypoints')) return;
     this.selectedWaypoint.set({ linkId: payload.link.id, pointIndex: payload.pointIndex });
     this.state.setLinkSelection(new Set([payload.link.id]));
-    this.undoRedo.pushState();
+    this.pushUndoIfEnabled();
     this._draggingWaypoint = {
       linkId: payload.link.id,
       pointIndex: payload.pointIndex,
@@ -598,6 +648,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Path pointer down: start pending segment drag if link selected and hit on path. */
   protected onPathPointerDown(payload: PathPointerPayload): void {
     if (this.state.linkingFrom()) return;
+    if (!this.interactionEnabled('linkWaypoints')) return;
     if (!this.state.selectedLinkIds().has(payload.link.id)) return;
     const svg = this.svgContainer?.nativeElement;
     if (!svg) return;
@@ -637,7 +688,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this._pendingSegmentDrag.target.releasePointerCapture?.(this._pendingSegmentDrag.pointerId);
 
     if (event.altKey && link.points.length > 0) {
-      this.undoRedo.pushState();
+      this.pushUndoIfEnabled();
       this._segmentMove = {
         linkId: this._pendingSegmentDrag.linkId,
         segmentIndex,
@@ -650,7 +701,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       document.addEventListener('pointermove', this._segmentMovePointerMove);
       document.addEventListener('pointerup', this._segmentMovePointerUp);
     } else {
-      this.undoRedo.pushState();
+      this.pushUndoIfEnabled();
       this.operations.addLinkWaypoint(
         this._pendingSegmentDrag.linkId,
         segmentIndex,
@@ -712,7 +763,8 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Segment midpoint pointer down (0 waypoints): add first waypoint and start dragging it. */
   protected onSegmentMidpointPointerDown(payload: SegmentMidpointPayload): void {
     if (this.state.linkingFrom()) return;
-    this.undoRedo.pushState();
+    if (!this.interactionEnabled('linkWaypoints')) return;
+    this.pushUndoIfEnabled();
     this.operations.addLinkWaypoint(payload.link.id, payload.insertIndex, payload.x, payload.y);
     this._draggingWaypoint = {
       linkId: payload.link.id,
@@ -728,6 +780,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Right-click on link: show context menu (Add waypoint / Clear waypoints). */
   protected onLinkContextMenu(payload: { link: Link; event: MouseEvent }): void {
+    if (!this.interactionEnabled('linkContextMenu')) return;
     payload.event.preventDefault();
     if (!this.state.selectedLinkIds().has(payload.link.id)) {
       this.state.setLinkSelection(new Set([payload.link.id]));
@@ -775,6 +828,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Right-click on node: ensure node is selected and show rotate context menu. */
   protected onNodeContextMenu(payload: NodeContextMenuEvent): void {
+    if (!this.interactionEnabled('nodeContextMenu')) return;
     const { node, event } = payload;
     if (!this.selectedNodeIds().has(node.id)) {
       this.state.setNodeSelection(new Set([node.id]));
@@ -848,7 +902,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     const isLeftWithSpace = event.button === 0 && this.state.spaceKeyDown();
     const isShiftLeft = event.button === 0 && event.shiftKey;
 
-    if ((isMiddle || isLeftWithSpace) && svg) {
+    if ((isMiddle || isLeftWithSpace) && svg && this.interactionEnabled('pan')) {
       const targetEl = event.target as Element;
       this._panning = {
         startClientX: event.clientX,
@@ -861,7 +915,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       targetEl.setPointerCapture?.(event.pointerId);
       return;
     }
-    if (isShiftLeft && svg) {
+    if (isShiftLeft && svg && this.interactionEnabled('rubberBandSelection')) {
       const targetEl = event.target as Element;
       const pt = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
       this._rubberBand = { x1: pt.x, y1: pt.y, pointerId: event.pointerId, target: targetEl };
@@ -892,7 +946,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onDeleteKey(): void {
     const sw = this.selectedWaypoint();
     if (sw !== null) {
-      this.undoRedo.pushState();
+      this.pushUndoIfEnabled();
       this.operations.removeLinkWaypoint(sw.linkId, sw.pointIndex);
       this.selectedWaypoint.set(null);
       return;
@@ -1063,6 +1117,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Handle resize handle pointer down. */
   protected onResizeHandlePointerDown(event: ResizeHandlePointerEvent): void {
+    if (!this.interactionEnabled('groupResize')) return;
     const svg = this.svgContainer?.nativeElement;
     if (!svg) return;
 

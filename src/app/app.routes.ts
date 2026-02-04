@@ -4,8 +4,6 @@ export const routes: Routes = [
   {
     path: '',
     loadComponent: () =>
-      import('./features/graph-editor/graph-editor.component').then(
-        (m) => m.GraphEditorComponent
-      ),
+      import('./editor-page/editor-page.component').then((m) => m.EditorPageComponent),
   },
 ];

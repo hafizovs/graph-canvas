@@ -1,6 +1,7 @@
 <div
   class="graph-editor"
   appGraphEditorKeyboard
+  [keyboardConfig]="effectiveConfig().keyboard"
   (escapeKey)="onEscapeKey()"
   (deleteKey)="onDeleteKey()"
   (groupKey)="onGroup()"
@@ -9,7 +10,9 @@
   (pointermove)="onContainerPointerMove($event)"
   (pointerup)="onContainerPointerUp($event)"
 >
+  @if (effectiveConfig().toolbar?.visible) {
   <app-graph-toolbar
+    [toolbarConfig]="effectiveConfig().toolbar"
     (addNode)="onAddNode()"
     (deleteSelection)="onDeleteSelection()"
     (rotateCw)="onRotateCw()"
@@ -36,13 +39,19 @@
     [linkRouting]="linkRoutingForToolbar()"
     (linkRoutingChange)="onLinkRoutingChange($event)"
   />
+  }
 
   <div
     class="editor-main"
     [class.palette-dragging]="draggingFromPalette()"
     [class.palette-drop-over-canvas]="draggingFromPalette() && paletteDropPreview() !== null"
   >
-    <app-graph-palette (shapeDragStart)="onPaletteShapeDragStart($event)" />
+    @if (effectiveConfig().palette?.visible) {
+    <app-graph-palette
+      [paletteConfig]="effectiveConfig().palette"
+      (shapeDragStart)="onPaletteShapeDragStart($event)"
+    />
+    }
 
     <div
       class="canvas-wrapper"
@@ -71,7 +80,7 @@
         </pattern>
       </defs>
       <g class="graph-content">
-        @if (snapToGridEnabled()) {
+        @if (effectiveConfig().gridVisible !== false && snapToGridEnabled()) {
           <rect
             class="grid-layer"
             [attr.x]="viewBox().x - gridStep"

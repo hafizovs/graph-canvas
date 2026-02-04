@@ -13,6 +13,7 @@ import {
 } from '../../../../graph-core';
 import type { LinkRouting } from '../../../../graph-core';
 import type { AlignMode } from '../services/graph-operations.service';
+import type { GraphEditorToolbarConfig } from '../config/graph-editor-config';
 
 /** Toolbar: add node, delete selection, load example/file/storage, save. Emits events; parent handles logic. */
 @Component({
@@ -23,6 +24,9 @@ import type { AlignMode } from '../services/graph-operations.service';
   styleUrl: './graph-toolbar.component.scss',
 })
 export class GraphToolbarComponent {
+  /** Toolbar config; when a flag is false, that section/button is hidden. */
+  readonly toolbarConfig = input<GraphEditorToolbarConfig | undefined>(undefined);
+
   readonly disabled = input<boolean>(false);
   readonly hasSelection = input<boolean>(false);
   /** True when at least one node is selected (for rotate buttons). */
@@ -56,6 +60,10 @@ export class GraphToolbarComponent {
   readonly loadFromStorage = output<void>();
   readonly align = output<AlignMode>();
   readonly linkRoutingChange = output<LinkRouting>();
+
+  protected show(key: keyof GraphEditorToolbarConfig): boolean {
+    return this.toolbarConfig()?.[key] !== false;
+  }
 
   /** Emit linkRoutingChange when user changes connector style in select. */
   protected onLinkRoutingChange(event: Event): void {

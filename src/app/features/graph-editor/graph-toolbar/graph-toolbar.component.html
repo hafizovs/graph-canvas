@@ -1,4 +1,5 @@
 <div class="toolbar">
+  @if (show('addNode')) {
   <button
     type="button"
     class="toolbar-btn"
@@ -12,6 +13,8 @@
     </svg>
     <span>Add node</span>
   </button>
+  }
+  @if (show('delete')) {
   <button
     type="button"
     class="toolbar-btn"
@@ -27,6 +30,8 @@
     </svg>
     <span>Delete</span>
   </button>
+  }
+  @if (show('rotate')) {
   <button
     type="button"
     class="toolbar-btn"
@@ -53,6 +58,8 @@
     </svg>
     <span>Rotate CCW</span>
   </button>
+  }
+  @if (show('align')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <button
     type="button"
@@ -166,6 +173,8 @@
     </svg>
     <span>Distribute V</span>
   </button>
+  }
+  @if (show('groupUngroup')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <button
     type="button"
@@ -200,6 +209,8 @@
     </svg>
     <span>Ungroup</span>
   </button>
+  }
+  @if (show('connectorStyle')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Connector:</span>
   <select
@@ -210,6 +221,8 @@
     <option value="straight" [selected]="linkRouting() === 'straight'">Straight</option>
     <option value="orthogonal" [selected]="linkRouting() === 'orthogonal'">Orthogonal</option>
   </select>
+  }
+  @if (show('zoom')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <button
     type="button"
@@ -267,6 +280,8 @@
     </svg>
     <span>Zoom to selection</span>
   </button>
+  }
+  @if (show('snapToGrid')) {
   <button
     type="button"
     class="toolbar-btn"
@@ -283,6 +298,8 @@
     </svg>
     <span>Snap to grid</span>
   </button>
+  }
+  @if (show('examples')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Examples:</span>
   <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleEmpty)" title="Empty diagram">
@@ -297,6 +314,8 @@
   <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleDiamond)" title="Diamond">
     Diamond
   </button>
+  }
+  @if (show('saveLoad')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onSave()" title="Save to file and storage">
     Save
@@ -314,4 +333,5 @@
   <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFromStorage()" title="Load from storage">
     Load storage
   </button>
+  }
 </div>
