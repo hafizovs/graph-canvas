@@ -6,7 +6,9 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "test": "ng test",
+    "storybook": "ng run graph-canvas:storybook",
+    "build-storybook": "ng run graph-canvas:build-storybook"
   },
   "prettier": {
     "printWidth": 100,
@@ -38,6 +40,16 @@
     "@angular/compiler-cli": "^21.1.0",
     "jsdom": "^27.1.0",
     "typescript": "~5.9.2",
-    "vitest": "^4.0.8"
+    "vitest": "^4.0.8",
+    "storybook": "^10.2.5",
+    "@storybook/angular": "^10.2.5",
+    "@storybook/addon-a11y": "^10.2.5",
+    "@storybook/addon-docs": "^10.2.5",
+    "@storybook/addon-onboarding": "^10.2.5",
+    "@angular-devkit/build-angular": "^21.1.0",
+    "@angular-devkit/architect": "^0.2101.0",
+    "@angular-devkit/core": "^21.1.0",
+    "@angular/platform-browser-dynamic": "^21.1.0",
+    "@compodoc/compodoc": "^1.2.1"
   }
 }
