@@ -1,0 +1,35 @@
+---
+description: SVG-теги в шаблонах — использовать префикс svg:
+globs: "**/*.html"
+alwaysApply: true
+---
+
+# SVG-теги в шаблонах
+
+Во всех HTML-шаблонах Angular используй для SVG-элементов префикс **`svg:`**, чтобы явно указывать пространство имён SVG и избегать конфликтов с HTML.
+
+## Правило
+
+- Каждый SVG-тег пиши с префиксом `svg:`.
+- Примеры: `svg:circle`, `svg:path`, `svg:rect`, `svg:g`, `svg:line`, `svg:defs`, `svg:clipPath`, `svg:text`, `svg:ellipse`, `svg:polygon`, `svg:image`, `svg:use` и т.д.
+- Корневой контейнер тоже: **`<svg:svg>`** (или `<svg>` — корневой тег `svg` в Angular часто оставляют без префикса; при необходимости можно использовать `svg:svg` для единообразия).
+
+## Примеры
+
+```html
+<!-- ❌ Плохо -->
+<svg>
+  <circle cx="10" cy="10" r="5" />
+  <path d="M0 0 L10 10" />
+  <g><rect x="0" y="0" width="20" height="20" /></g>
+</svg>
+
+<!-- ✅ Хорошо -->
+<svg>
+  <svg:circle cx="10" cy="10" r="5" />
+  <svg:path d="M0 0 L10 10" />
+  <svg:g><svg:rect x="0" y="0" width="20" height="20" /></svg:g>
+</svg>
+```
+
+При создании или правке разметки с фигурами (path, circle, rect, line, g, defs, clipPath, text, ellipse, polygon, image, use) всегда добавляй префикс **`svg:`**.
