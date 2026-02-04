@@ -2,6 +2,7 @@ import { Injectable, signal, computed } from '@angular/core';
 import { deserializeDiagram } from '../../../../graph-core';
 import type { Diagram } from '../../../../graph-core';
 import type { DiagramJson } from '../../../../graph-core';
+import type { LinkRouting } from '../../../../graph-core';
 import type { NodeId, LinkId, PortId } from '../../../../graph-core';
 
 /**
@@ -48,6 +49,9 @@ export class GraphEditorStateService {
   /** When true, node positions snap to grid (add, move, paste, palette drop). */
   readonly snapToGridEnabled = signal(true);
 
+  /** Default link routing for newly created links (used by createLink). */
+  readonly defaultLinkRouting = signal<LinkRouting>('orthogonal');
+
   /** Set snap-to-grid on or off. */
   setSnapToGridEnabled(value: boolean): void {
     this.snapToGridEnabled.set(value);
@@ -56,6 +60,11 @@ export class GraphEditorStateService {
   /** Toggle snap-to-grid (for toolbar button). */
   toggleSnapToGrid(): void {
     this.snapToGridEnabled.update((v) => !v);
+  }
+
+  /** Set default link routing (for new links and toolbar select when no links selected). */
+  setDefaultLinkRouting(routing: LinkRouting): void {
+    this.defaultLinkRouting.set(routing);
   }
 
   private _nodeIdCounter = 0;

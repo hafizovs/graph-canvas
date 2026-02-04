@@ -28,6 +28,8 @@
     [canAlign]="selectedNodeIds().size >= 2"
     [canDistribute]="selectedNodeIds().size >= 3"
     [snapToGridEnabled]="snapToGridEnabled()"
+    [linkRouting]="linkRoutingForToolbar()"
+    (linkRoutingChange)="onLinkRoutingChange($event)"
   />
 
   <div
@@ -215,6 +217,27 @@
         <button type="button" (click)="onRotateNodeContext(-90)">
           Rotate 90° CCW
         </button>
+      </div>
+    }
+    @if (linkContextMenu(); as ctx) {
+      <div
+        class="node-context-menu-backdrop"
+        (click)="closeLinkContextMenu()"
+      ></div>
+      <div
+        class="node-context-menu"
+        [style.left.px]="ctx.x"
+        [style.top.px]="ctx.y"
+        (click)="$event.stopPropagation()"
+      >
+        <button type="button" (click)="onLinkContextMenuAddWaypoint(ctx)">
+          Add waypoint
+        </button>
+        @if (ctx.hasWaypoints) {
+          <button type="button" (click)="onLinkContextMenuClearWaypoints(ctx.linkId)">
+            Clear waypoints
+          </button>
+        }
       </div>
     }
   </div>

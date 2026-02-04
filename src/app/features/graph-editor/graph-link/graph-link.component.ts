@@ -21,6 +21,7 @@ export interface PathPointerPayload {
 
 export interface SegmentMidpointPayload {
   link: Link;
+  insertIndex: number;
   x: number;
   y: number;
   event: PointerEvent;
@@ -67,16 +68,27 @@ export class GraphLinkComponent {
 
   protected readonly waypoints = computed(() => this.link().points);
 
-  /** Midpoint when no waypoints (for adding first bend via drag). */
-  protected readonly midpointForAdd = computed(() => {
+  /** Midpoints for each segment (source–p0, p0–p1, …, pn–target). insertIndex = where to insert new waypoint. */
+  protected readonly segmentMidpoints = computed(() => {
     this.renderTick();
     const linkVal = this.link();
     const diagramVal = this.diagram();
-    if (linkVal.points.length > 0 || this.previewTarget()) return null;
+    if (this.previewTarget()) return [];
     const source = diagramVal.getPortPosition(linkVal.sourcePortId);
     const target = diagramVal.getPortPosition(linkVal.targetPortId);
-    if (!source || !target) return null;
-    return { x: (source.x + target.x) / 2, y: (source.y + target.y) / 2 };
+    if (!source || !target) return [];
+    const pts = [source, ...linkVal.points, target];
+    const result: Array<{ insertIndex: number; x: number; y: number }> = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i];
+      const b = pts[i + 1];
+      result.push({
+        insertIndex: i,
+        x: (a.x + b.x) / 2,
+        y: (a.y + b.y) / 2,
+      });
+    }
+    return result;
   });
 
   /** Emit linkClick with link and shiftKey for selection. */
@@ -113,17 +125,15 @@ export class GraphLinkComponent {
     this.linkContextMenu.emit({ link: this.link(), event });
   }
 
-  /** Emit segmentMidpointPointerDown when grabbing midpoint (0 waypoints) to add first bend. */
-  protected onSegmentMidpointPointerDown(event: PointerEvent): void {
+  /** Emit segmentMidpointPointerDown when grabbing a segment midpoint to add waypoint. */
+  protected onSegmentMidpointPointerDown(event: PointerEvent, seg: { insertIndex: number; x: number; y: number }): void {
     event.stopPropagation();
-    const mid = this.midpointForAdd();
-    if (mid) {
-      this.segmentMidpointPointerDown.emit({
-        link: this.link(),
-        x: mid.x,
-        y: mid.y,
-        event,
-      });
-    }
+    this.segmentMidpointPointerDown.emit({
+      link: this.link(),
+      insertIndex: seg.insertIndex,
+      x: seg.x,
+      y: seg.y,
+      event,
+    });
   }
 }

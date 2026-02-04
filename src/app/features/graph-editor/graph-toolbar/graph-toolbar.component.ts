@@ -11,6 +11,7 @@ import {
   MOCK_DIAGRAM_CHAIN,
   MOCK_DIAGRAM_DIAMOND,
 } from '../../../../graph-core';
+import type { LinkRouting } from '../../../../graph-core';
 import type { AlignMode } from '../services/graph-operations.service';
 
 /** Toolbar: add node, delete selection, load example/file/storage, save. Emits events; parent handles logic. */
@@ -35,6 +36,8 @@ export class GraphToolbarComponent {
   /** True when 3+ nodes selected (for distribute buttons). */
   readonly canDistribute = input<boolean>(false);
   readonly snapToGridEnabled = input<boolean>(true);
+  /** Current link routing for connector select (from selection or default). */
+  readonly linkRouting = input<LinkRouting>('orthogonal');
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
@@ -52,6 +55,16 @@ export class GraphToolbarComponent {
   readonly loadFromFile = output<DiagramJson>();
   readonly loadFromStorage = output<void>();
   readonly align = output<AlignMode>();
+  readonly linkRoutingChange = output<LinkRouting>();
+
+  /** Emit linkRoutingChange when user changes connector style in select. */
+  protected onLinkRoutingChange(event: Event): void {
+    const select = event.target as HTMLSelectElement;
+    const value = select.value as LinkRouting;
+    if (value === 'straight' || value === 'orthogonal') {
+      this.linkRoutingChange.emit(value);
+    }
+  }
 
   /** Emit addNode. */
   protected onAddNode(): void {

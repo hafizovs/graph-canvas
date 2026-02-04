@@ -201,6 +201,16 @@
     <span>Ungroup</span>
   </button>
   <span class="toolbar-sep" aria-hidden="true"></span>
+  <span class="toolbar-label">Connector:</span>
+  <select
+    class="toolbar-select"
+    (change)="onLinkRoutingChange($event)"
+    title="Connector style (Straight / Orthogonal)"
+  >
+    <option value="straight" [selected]="linkRouting() === 'straight'">Straight</option>
+    <option value="orthogonal" [selected]="linkRouting() === 'orthogonal'">Orthogonal</option>
+  </select>
+  <span class="toolbar-sep" aria-hidden="true"></span>
   <button
     type="button"
     class="toolbar-btn"

@@ -11,7 +11,7 @@ import {
   cloneDiagramJsonForPaste,
 } from '../../../../graph-core';
 import type { DiagramJson } from '../../../../graph-core';
-import type { LinkId, NodeId, NodeShape, PortId, PortSide } from '../../../../graph-core';
+import type { LinkId, LinkRouting, NodeId, NodeShape, PortId, PortSide } from '../../../../graph-core';
 import { GraphEditorStateService } from './graph-editor-state.service';
 import { GraphUndoRedoService } from './graph-undo-redo.service';
 import { GraphCoordinateService } from './graph-coordinate.service';
@@ -318,8 +318,26 @@ export class GraphOperationsService {
         id: linkId,
         sourcePortId,
         targetPortId,
+        routing: this.state.defaultLinkRouting(),
       })
     );
+    this.state.setDiagram(d, true);
+    return true;
+  }
+
+  /**
+   * Set routing for all selected links. Pushes undo once at start.
+   * Used when user changes connector style in toolbar with links selected.
+   */
+  setSelectedLinksRouting(routing: LinkRouting): boolean {
+    const d = this.state.getDiagram();
+    const linkIds = this.state.selectedLinkIds();
+    if (!d || linkIds.size === 0) return false;
+    this.undoRedo.pushState();
+    for (const linkId of linkIds) {
+      const link = d.getLink(linkId);
+      if (link) link.routing = routing;
+    }
     this.state.setDiagram(d, true);
     return true;
   }
@@ -544,6 +562,34 @@ export class GraphOperationsService {
     this.undoRedo.pushState();
     link.points.splice(index, 1);
     this.state.setDiagram(d, true);
+    return true;
+  }
+
+  /**
+   * Move a segment by (dx, dy): segment 0 moves first waypoint; segment n moves last waypoint;
+   * segment i (1..n-1) moves both waypoints at segment ends. Does not push undo (caller pushes at drag start).
+   */
+  moveLinkSegment(linkId: LinkId, segmentIndex: number, dx: number, dy: number): boolean {
+    const d = this.state.getDiagram();
+    const link = d?.getLink(linkId);
+    if (!d || !link) return false;
+    const n = link.points.length;
+    if (n === 0) return false;
+    if (segmentIndex === 0) {
+      link.points[0] = new Point(link.points[0].x + dx, link.points[0].y + dy);
+    } else if (segmentIndex >= n) {
+      link.points[n - 1] = new Point(link.points[n - 1].x + dx, link.points[n - 1].y + dy);
+    } else {
+      link.points[segmentIndex - 1] = new Point(
+        link.points[segmentIndex - 1].x + dx,
+        link.points[segmentIndex - 1].y + dy
+      );
+      link.points[segmentIndex] = new Point(
+        link.points[segmentIndex].x + dx,
+        link.points[segmentIndex].y + dy
+      );
+    }
+    this.state.incrementRenderTick();
     return true;
   }
 

@@ -23,13 +23,13 @@
   pointer-events="none"
 />
 @if (selected() && !previewTarget()) {
-  @if (midpointForAdd(); as mid) {
+  @for (seg of segmentMidpoints(); track seg.insertIndex) {
     <circle
       class="segment-handle"
-      [attr.cx]="mid.x"
-      [attr.cy]="mid.y"
+      [attr.cx]="seg.x"
+      [attr.cy]="seg.y"
       r="5"
-      (pointerdown)="onSegmentMidpointPointerDown($event)"
+      (pointerdown)="onSegmentMidpointPointerDown($event, seg)"
     />
   }
   @for (point of waypoints(); track $index) {
