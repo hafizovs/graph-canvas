@@ -1,6 +1,7 @@
 import {
   Component,
   ChangeDetectionStrategy,
+  inject,
   input,
   output,
   computed,
@@ -8,6 +9,7 @@ import {
   NO_ERRORS_SCHEMA,
 } from '@angular/core';
 import type { Diagram, Link, PointLike } from '../../../../graph-core';
+import { GraphLinkGeometryService } from '../services/graph-link-geometry.service';
 
 export interface WaypointPointerPayload {
   link: Link;
@@ -38,6 +40,8 @@ export interface SegmentMidpointPayload {
   styleUrl: './graph-link.component.scss',
 })
 export class GraphLinkComponent {
+  private readonly linkGeometry = inject(GraphLinkGeometryService);
+
   readonly link = input.required<Link>();
   readonly diagram = input.required<Diagram>();
   readonly previewTarget = input<PointLike | null>(null);
@@ -72,9 +76,28 @@ export class GraphLinkComponent {
     return linkVal.buildPath(diagramVal);
   });
 
-  protected readonly waypoints = computed(() => this.link().points);
+  /**
+   * Waypoint display: for straight routing = link.points with their index;
+   * for orthogonal = expanded path inner points, with pointIndex when the point is in link.points (selectable/removable).
+   */
+  protected readonly displayWaypoints = computed(() => {
+    this.renderTick();
+    const linkVal = this.link();
+    const diagramVal = this.diagram();
+    if (this.previewTarget()) return [];
+    if (linkVal.routing === 'orthogonal') {
+      const expanded = this.linkGeometry.getPathPoints(linkVal, diagramVal);
+      if (expanded.length < 3) return [];
+      const inner = expanded.slice(1, -1);
+      return inner.map((pt) => {
+        const idx = linkVal.points.findIndex((p) => p.x === pt.x && p.y === pt.y);
+        return { x: pt.x, y: pt.y, pointIndex: idx >= 0 ? idx : null };
+      });
+    }
+    return linkVal.points.map((p, i) => ({ x: p.x, y: p.y, pointIndex: i }));
+  });
 
-  /** Midpoints for each segment (source–p0, p0–p1, …, pn–target). insertIndex = where to insert new waypoint. */
+  /** Midpoints for each segment. For orthogonal uses expanded path so positions match the visible path. */
   protected readonly segmentMidpoints = computed(() => {
     this.renderTick();
     const linkVal = this.link();
@@ -83,13 +106,21 @@ export class GraphLinkComponent {
     const source = diagramVal.getPortPosition(linkVal.sourcePortId);
     const target = diagramVal.getPortPosition(linkVal.targetPortId);
     if (!source || !target) return [];
-    const pts = [source, ...linkVal.points, target];
-    const result: Array<{ insertIndex: number; x: number; y: number }> = [];
+    const pts =
+      linkVal.routing === 'orthogonal'
+        ? this.linkGeometry.getPathPoints(linkVal, diagramVal)
+        : [source, ...linkVal.points, target];
+    const result: Array<{ segmentIndex: number; insertIndex: number; x: number; y: number }> = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[i];
       const b = pts[i + 1];
+      const pointInsertIndex =
+        linkVal.routing === 'orthogonal'
+          ? this.linkGeometry.segmentToPointInsertIndex(linkVal, diagramVal, i)
+          : i;
       result.push({
-        insertIndex: i,
+        segmentIndex: i,
+        insertIndex: pointInsertIndex,
         x: (a.x + b.x) / 2,
         y: (a.y + b.y) / 2,
       });
@@ -109,6 +140,17 @@ export class GraphLinkComponent {
     this.pathPointerDown.emit({ link: this.link(), event });
   }
 
+  /** Emit waypointPointerDown for waypoint drag; on corner (pointIndex null) only stop propagation. */
+  protected onWaypointHitPointerDown(
+    event: PointerEvent,
+    item: { x: number; y: number; pointIndex: number | null }
+  ): void {
+    event.stopPropagation();
+    if (item.pointIndex !== null) {
+      this.waypointPointerDown.emit({ link: this.link(), pointIndex: item.pointIndex, event });
+    }
+  }
+
   /** Emit waypointPointerDown for waypoint drag. */
   protected onWaypointPointerDown(event: PointerEvent, index: number): void {
     event.stopPropagation();
@@ -118,6 +160,18 @@ export class GraphLinkComponent {
   /** Emit waypointDoubleClick for remove waypoint. */
   protected onWaypointDoubleClick(index: number): void {
     this.waypointDoubleClick.emit({ link: this.link(), pointIndex: index });
+  }
+
+  /** Right-click on waypoint or corner: prevent default; remove waypoint only if pointIndex set. */
+  protected onWaypointHitContextMenu(
+    event: MouseEvent,
+    item: { x: number; y: number; pointIndex: number | null }
+  ): void {
+    event.preventDefault();
+    event.stopPropagation();
+    if (item.pointIndex !== null) {
+      this.waypointDoubleClick.emit({ link: this.link(), pointIndex: item.pointIndex });
+    }
   }
 
   /** Right-click on waypoint: remove. */
@@ -132,7 +186,10 @@ export class GraphLinkComponent {
   }
 
   /** Emit segmentMidpointPointerDown when grabbing a segment midpoint to add waypoint. */
-  protected onSegmentMidpointPointerDown(event: PointerEvent, seg: { insertIndex: number; x: number; y: number }): void {
+  protected onSegmentMidpointPointerDown(
+    event: PointerEvent,
+    seg: { segmentIndex: number; insertIndex: number; x: number; y: number }
+  ): void {
     event.stopPropagation();
     this.segmentMidpointPointerDown.emit({
       link: this.link(),
