@@ -155,7 +155,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   } | null>(null);
   /** Node context menu position (client coordinates); null when closed. */
   protected readonly nodeContextMenuPosition = signal<{ x: number; y: number } | null>(null);
-  /** Link context menu: position and data for Add waypoint / Clear waypoints. */
+  /** Link context menu: position and data for Add waypoint / Clear waypoints / z-order / lock. */
   protected readonly linkContextMenu = signal<{
     x: number;
     y: number;
@@ -164,10 +164,33 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     waypointX: number;
     waypointY: number;
     hasWaypoints: boolean;
+    linkLocked: boolean;
   } | null>(null);
 
   /** Selected waypoint (single); null when link or segment is selected as a whole. */
   protected readonly selectedWaypoint = signal<{ linkId: LinkId; pointIndex: number } | null>(null);
+
+  /** True when node context menu is from a group (no Rotate). */
+  protected readonly nodeContextMenuIsGroup = signal<boolean>(false);
+
+  /** True when all selected nodes and links are locked (for Lock/Unlock button label). */
+  protected readonly hasLockedSelection = computed(() => {
+    const d = this.state.getDiagram();
+    if (!d) return false;
+    const nodeIds = this.state.selectedNodeIds();
+    const linkIds = this.state.selectedLinkIds();
+    if (nodeIds.size === 0 && linkIds.size === 0) return false;
+    let allLocked = true;
+    for (const nodeId of nodeIds) {
+      const n = d.getNode(nodeId);
+      if (n && !n.locked) allLocked = false;
+    }
+    for (const linkId of linkIds) {
+      const l = d.getLink(linkId);
+      if (l && !l.locked) allLocked = false;
+    }
+    return allLocked;
+  });
 
   /** Index of selected waypoint for a given link, or null. */
   protected selectedWaypointIndexForLink(linkId: LinkId): number | null {
@@ -417,6 +440,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onNodePointerDown(e: NodePointerEvent): void {
     if (this.state.linkingFrom()) return;
     if (!this.interactionEnabled('nodeDrag')) return;
+    if (e.node.locked) return;
     const pt = this.coordinate.clientToSvg(
       this.svgContainer?.nativeElement,
       e.event.clientX,
@@ -630,6 +654,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onWaypointPointerDown(payload: WaypointPointerPayload): void {
     if (this.state.linkingFrom()) return;
     if (!this.interactionEnabled('linkWaypoints')) return;
+    if (payload.link.locked) return;
     this.selectedWaypoint.set({ linkId: payload.link.id, pointIndex: payload.pointIndex });
     this.state.setLinkSelection(new Set([payload.link.id]));
     this.pushUndoIfEnabled();
@@ -649,6 +674,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onPathPointerDown(payload: PathPointerPayload): void {
     if (this.state.linkingFrom()) return;
     if (!this.interactionEnabled('linkWaypoints')) return;
+    if (payload.link.locked) return;
     if (!this.state.selectedLinkIds().has(payload.link.id)) return;
     const svg = this.svgContainer?.nativeElement;
     if (!svg) return;
@@ -764,6 +790,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onSegmentMidpointPointerDown(payload: SegmentMidpointPayload): void {
     if (this.state.linkingFrom()) return;
     if (!this.interactionEnabled('linkWaypoints')) return;
+    if (payload.link.locked) return;
     this.pushUndoIfEnabled();
     this.operations.addLinkWaypoint(payload.link.id, payload.insertIndex, payload.x, payload.y);
     this._draggingWaypoint = {
@@ -804,6 +831,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       waypointX,
       waypointY,
       hasWaypoints: payload.link.points.length > 0,
+      linkLocked: payload.link.locked,
     });
   }
 
@@ -826,7 +854,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.linkContextMenu.set(null);
   }
 
-  /** Right-click on node: ensure node is selected and show rotate context menu. */
+  /** Right-click on node: ensure node is selected and show context menu. */
   protected onNodeContextMenu(payload: NodeContextMenuEvent): void {
     if (!this.interactionEnabled('nodeContextMenu')) return;
     const { node, event } = payload;
@@ -834,6 +862,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       this.state.setNodeSelection(new Set([node.id]));
       this.state.setLinkSelection(new Set());
     }
+    this.nodeContextMenuIsGroup.set(false);
     this.nodeContextMenuPosition.set({ x: event.clientX, y: event.clientY });
   }
 
@@ -846,6 +875,19 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Close node context menu (e.g. backdrop click). */
   protected closeNodeContextMenu(): void {
     this.nodeContextMenuPosition.set(null);
+    this.nodeContextMenuIsGroup.set(false);
+  }
+
+  protected onBringToFront(): void {
+    this.operations.bringToFront();
+  }
+
+  protected onSendToBack(): void {
+    this.operations.sendToBack();
+  }
+
+  protected onToggleLock(): void {
+    this.operations.toggleLockSelection();
   }
 
   /** Rotate selected nodes 90° clockwise (toolbar / R). */
@@ -1107,7 +1149,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   }
 
   protected onGroupNodeContextMenu(event: GroupNodeContextMenuEvent): void {
-    // Groups don't support rotation, so no context menu for now
+    if (!this.interactionEnabled('nodeContextMenu')) return;
+    const { node, event: ev } = event;
+    if (!this.selectedNodeIds().has(node.id)) {
+      this.state.setNodeSelection(new Set([node.id]));
+      this.state.setLinkSelection(new Set());
+    }
+    this.nodeContextMenuIsGroup.set(true);
+    this.nodeContextMenuPosition.set({ x: ev.clientX, y: ev.clientY });
   }
 
   /** Handle group port pointer events (same as regular ports). */
@@ -1118,6 +1167,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Handle resize handle pointer down. */
   protected onResizeHandlePointerDown(event: ResizeHandlePointerEvent): void {
     if (!this.interactionEnabled('groupResize')) return;
+    if (event.node.locked) return;
     const svg = this.svgContainer?.nativeElement;
     if (!svg) return;
 

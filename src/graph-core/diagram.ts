@@ -12,14 +12,14 @@ export class Diagram {
   private _nodes: Map<NodeId, Node> = new Map();
   private _links: Map<LinkId, Link> = new Map();
 
-  /** All nodes in the diagram. */
+  /** All nodes in the diagram, sorted by zIndex ascending (lower = behind). */
   get nodes(): Node[] {
-    return Array.from(this._nodes.values());
+    return [...this._nodes.values()].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
   }
 
-  /** All links in the diagram. */
+  /** All links in the diagram, sorted by zIndex ascending (lower = behind). */
   get links(): Link[] {
-    return Array.from(this._links.values());
+    return [...this._links.values()].sort((a, b) => (a.zIndex ?? 0) - (b.zIndex ?? 0));
   }
 
   /**

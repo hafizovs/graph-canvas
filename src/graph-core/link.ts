@@ -19,6 +19,10 @@ export interface LinkConfig {
   points?: Array<{ x: number; y: number }>;
   /** Path routing; defaults to 'straight'. */
   routing?: LinkRouting;
+  /** Z-order for stacking; higher = on top. Default 0. */
+  zIndex?: number;
+  /** When true, link cannot be edited (waypoints) or deleted. Default false. */
+  locked?: boolean;
 }
 
 /**
@@ -31,6 +35,8 @@ export class Link implements LinkConfig {
   readonly targetPortId: PortId;
   points: Point[] = [];
   routing: LinkRouting = 'straight';
+  zIndex: number;
+  locked: boolean;
 
   constructor(config: LinkConfig) {
     this.id = config.id;
@@ -38,6 +44,18 @@ export class Link implements LinkConfig {
     this.targetPortId = config.targetPortId;
     this.points = (config.points ?? []).map((p) => new Point(p.x, p.y));
     this.routing = config.routing ?? 'straight';
+    this.zIndex = config.zIndex ?? 0;
+    this.locked = config.locked ?? false;
+  }
+
+  /** Set z-order (higher = on top). */
+  setZIndex(value: number): void {
+    this.zIndex = value;
+  }
+
+  /** Set locked state (when true, link cannot be edited or deleted). */
+  setLocked(value: boolean): void {
+    this.locked = value;
   }
 
   /**

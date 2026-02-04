@@ -22,12 +22,16 @@ export class CreateLinkAction implements GraphEditorAction {
       ) || d.links.some((l) => l.targetPortId === this.targetPortId);
     if (hasExisting) return;
     const linkId = `l${ctx.state.incrementLinkIdCounter()}`;
+    const maxZ = d.links.length > 0
+      ? Math.max(...d.links.map((l) => l.zIndex ?? 0))
+      : -1;
     d.addLink(
       new Link({
         id: linkId,
         sourcePortId: this.sourcePortId,
         targetPortId: this.targetPortId,
         routing: ctx.state.defaultLinkRouting(),
+        zIndex: maxZ + 1,
       })
     );
     ctx.state.setDiagram(d, true);
@@ -66,7 +70,7 @@ export class AddLinkWaypointAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     const link = d?.getLink(this.linkId);
-    if (!d || !link) return;
+    if (!d || !link || link.locked) return;
     let px = this.x;
     let py = this.y;
     if (ctx.state.snapToGridEnabled()) {
@@ -93,7 +97,7 @@ export class MoveLinkWaypointAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     const link = d?.getLink(this.linkId);
-    if (!d || !link || this.index < 0 || this.index >= link.points.length) return;
+    if (!d || !link || link.locked || this.index < 0 || this.index >= link.points.length) return;
     let px = this.x;
     let py = this.y;
     if (ctx.state.snapToGridEnabled()) {
@@ -118,7 +122,7 @@ export class RemoveLinkWaypointAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     const link = d?.getLink(this.linkId);
-    if (!d || !link || this.index < 0 || this.index >= link.points.length) return;
+    if (!d || !link || link.locked || this.index < 0 || this.index >= link.points.length) return;
     link.points.splice(this.index, 1);
     ctx.state.setDiagram(d, true);
   }
@@ -138,7 +142,7 @@ export class MoveLinkSegmentAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     const link = d?.getLink(this.linkId);
-    if (!d || !link) return;
+    if (!d || !link || link.locked) return;
     const n = link.points.length;
     if (n === 0) return;
     if (this.segmentIndex === 0) {
@@ -171,7 +175,7 @@ export class ClearLinkWaypointsAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     const link = d?.getLink(this.linkId);
-    if (!d || !link || link.points.length === 0) return;
+    if (!d || !link || link.locked || link.points.length === 0) return;
     link.points.length = 0;
     ctx.state.setDiagram(d, true);
   }

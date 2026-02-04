@@ -26,6 +26,7 @@ export class DeleteSelectionAction implements GraphEditorAction {
 
     for (const nodeId of nodeIds) {
       const node = d.getNode(nodeId);
+      if (!node || node.locked) continue;
       if (node instanceof GroupNode) {
         for (const childNodeId of node.childNodeIds) {
           d.removeNode(childNodeId);
@@ -37,7 +38,8 @@ export class DeleteSelectionAction implements GraphEditorAction {
       d.removeNode(nodeId);
     }
     for (const linkId of linkIds) {
-      d.removeLink(linkId);
+      const link = d.getLink(linkId);
+      if (link && !link.locked) d.removeLink(linkId);
     }
     ctx.state.clearSelection();
     ctx.state.setDiagram(d, true);

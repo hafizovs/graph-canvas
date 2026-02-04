@@ -22,6 +22,9 @@ import {
   CopyAction,
   PasteAction,
   DeleteSelectionAction,
+  BringToFrontAction,
+  SendToBackAction,
+  ToggleLockSelectionAction,
 } from '../actions';
 import type { AlignMode } from '../actions';
 
@@ -187,5 +190,35 @@ export class GraphOperationsService {
 
   resizeGroupNode(groupId: NodeId, newWidth: number, newHeight: number): void {
     this.dispatcher.dispatch(new ResizeGroupNodeAction(groupId, newWidth, newHeight));
+  }
+
+  bringToFront(): boolean {
+    const d = this.state.getDiagram();
+    if (!d) return false;
+    const hasSelection =
+      this.state.selectedNodeIds().size > 0 || this.state.selectedLinkIds().size > 0;
+    if (!hasSelection) return false;
+    this.dispatcher.dispatch(new BringToFrontAction());
+    return true;
+  }
+
+  sendToBack(): boolean {
+    const d = this.state.getDiagram();
+    if (!d) return false;
+    const hasSelection =
+      this.state.selectedNodeIds().size > 0 || this.state.selectedLinkIds().size > 0;
+    if (!hasSelection) return false;
+    this.dispatcher.dispatch(new SendToBackAction());
+    return true;
+  }
+
+  toggleLockSelection(): boolean {
+    const d = this.state.getDiagram();
+    if (!d) return false;
+    const hasSelection =
+      this.state.selectedNodeIds().size > 0 || this.state.selectedLinkIds().size > 0;
+    if (!hasSelection) return false;
+    this.dispatcher.dispatch(new ToggleLockSelectionAction());
+    return true;
   }
 }

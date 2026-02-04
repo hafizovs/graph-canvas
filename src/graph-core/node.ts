@@ -26,6 +26,10 @@ export interface NodeConfig {
   nodeType?: NodeType;
   /** Custom shape identifier when shape is 'custom'. */
   customShapeId?: string;
+  /** Z-order for stacking; higher = on top. Default 0. */
+  zIndex?: number;
+  /** When true, node cannot be moved, resized, rotated, or deleted. Default false. */
+  locked?: boolean;
   /** Initial ports (input/output). */
   ports?: Port[];
 }
@@ -44,6 +48,8 @@ export class Node implements NodeConfig {
   rotation: number;
   nodeType: NodeType;
   customShapeId?: string;
+  zIndex: number;
+  locked: boolean;
   private _ports: Map<PortId, Port> = new Map();
 
   constructor(config: NodeConfig) {
@@ -57,6 +63,8 @@ export class Node implements NodeConfig {
     this.rotation = config.rotation ?? 0;
     this.nodeType = config.nodeType ?? 'regular';
     this.customShapeId = config.customShapeId;
+    this.zIndex = config.zIndex ?? 0;
+    this.locked = config.locked ?? false;
     for (const p of config.ports ?? []) {
       this._ports.set(p.id, p);
     }
@@ -126,5 +134,15 @@ export class Node implements NodeConfig {
    */
   setRotation(deg: number): void {
     this.rotation = deg;
+  }
+
+  /** Set z-order (higher = on top). */
+  setZIndex(value: number): void {
+    this.zIndex = value;
+  }
+
+  /** Set locked state (when true, node cannot be moved, resized, rotated, or deleted). */
+  setLocked(value: boolean): void {
+    this.locked = value;
   }
 }

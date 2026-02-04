@@ -16,6 +16,8 @@ export interface GraphEditorToolbarConfig {
   rotate?: boolean;
   align?: boolean;
   groupUngroup?: boolean;
+  bringToFrontSendToBack?: boolean;
+  lockUnlock?: boolean;
   connectorStyle?: boolean;
   zoom?: boolean;
   snapToGrid?: boolean;
@@ -84,6 +86,8 @@ const DEFAULT_TOOLBAR: Required<GraphEditorToolbarConfig> = {
   rotate: true,
   align: true,
   groupUngroup: true,
+  bringToFrontSendToBack: true,
+  lockUnlock: true,
   connectorStyle: true,
   zoom: true,
   snapToGrid: true,

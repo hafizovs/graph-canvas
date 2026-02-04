@@ -38,6 +38,10 @@
     [snapToGridEnabled]="snapToGridEnabled()"
     [linkRouting]="linkRoutingForToolbar()"
     (linkRoutingChange)="onLinkRoutingChange($event)"
+    [hasLockedSelection]="hasLockedSelection()"
+    (bringToFront)="onBringToFront()"
+    (sendToBack)="onSendToBack()"
+    (lockUnlock)="onToggleLock()"
   />
   }
 
@@ -226,11 +230,22 @@
         [style.top.px]="pos.y"
         (click)="$event.stopPropagation()"
       >
-        <button type="button" (click)="onRotateNodeContext(90)">
-          Rotate 90° CW
+        @if (!nodeContextMenuIsGroup()) {
+          <button type="button" (click)="onRotateNodeContext(90)">
+            Rotate 90° CW
+          </button>
+          <button type="button" (click)="onRotateNodeContext(-90)">
+            Rotate 90° CCW
+          </button>
+        }
+        <button type="button" (click)="onBringToFront(); closeNodeContextMenu()">
+          Bring to front
         </button>
-        <button type="button" (click)="onRotateNodeContext(-90)">
-          Rotate 90° CCW
+        <button type="button" (click)="onSendToBack(); closeNodeContextMenu()">
+          Send to back
+        </button>
+        <button type="button" (click)="onToggleLock(); closeNodeContextMenu()">
+          {{ hasLockedSelection() ? 'Unlock' : 'Lock' }}
         </button>
       </div>
     }
@@ -245,14 +260,25 @@
         [style.top.px]="ctx.y"
         (click)="$event.stopPropagation()"
       >
-        <button type="button" (click)="onLinkContextMenuAddWaypoint(ctx)">
-          Add waypoint
-        </button>
-        @if (ctx.hasWaypoints) {
-          <button type="button" (click)="onLinkContextMenuClearWaypoints(ctx.linkId)">
-            Clear waypoints
+        @if (!ctx.linkLocked) {
+          <button type="button" (click)="onLinkContextMenuAddWaypoint(ctx)">
+            Add waypoint
           </button>
+          @if (ctx.hasWaypoints) {
+            <button type="button" (click)="onLinkContextMenuClearWaypoints(ctx.linkId)">
+              Clear waypoints
+            </button>
+          }
         }
+        <button type="button" (click)="onBringToFront(); closeLinkContextMenu()">
+          Bring to front
+        </button>
+        <button type="button" (click)="onSendToBack(); closeLinkContextMenu()">
+          Send to back
+        </button>
+        <button type="button" (click)="onToggleLock(); closeLinkContextMenu()">
+          {{ hasLockedSelection() ? 'Unlock' : 'Lock' }}
+        </button>
       </div>
     }
   </div>

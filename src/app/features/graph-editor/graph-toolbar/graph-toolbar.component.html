@@ -210,6 +210,57 @@
     <span>Ungroup</span>
   </button>
   }
+  @if (show('bringToFrontSendToBack')) {
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!hasSelection()"
+    (click)="onBringToFront()"
+    title="Bring to front"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="4" y="8" width="12" height="8" rx="1" />
+      <rect x="8" y="4" width="8" height="6" rx="1" />
+    </svg>
+    <span>Bring to front</span>
+  </button>
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!hasSelection()"
+    (click)="onSendToBack()"
+    title="Send to back"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <rect x="8" y="14" width="12" height="8" rx="1" />
+      <rect x="4" y="10" width="8" height="6" rx="1" />
+    </svg>
+    <span>Send to back</span>
+  </button>
+  }
+  @if (show('lockUnlock')) {
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="!hasSelection()"
+    (click)="onLockUnlock()"
+    [title]="hasLockedSelection() ? 'Unlock selected' : 'Lock selected'"
+  >
+    @if (hasLockedSelection()) {
+      <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+      </svg>
+      <span>Unlock</span>
+    } @else {
+      <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+        <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+      </svg>
+      <span>Lock</span>
+    }
+  </button>
+  }
   @if (show('connectorStyle')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Connector:</span>

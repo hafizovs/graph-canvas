@@ -42,6 +42,8 @@ export class GraphToolbarComponent {
   readonly snapToGridEnabled = input<boolean>(true);
   /** Current link routing for connector select (from selection or default). */
   readonly linkRouting = input<LinkRouting>('orthogonal');
+  /** True when all selected nodes/links are locked (shows Unlock vs Lock). */
+  readonly hasLockedSelection = input<boolean>(false);
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
@@ -60,6 +62,9 @@ export class GraphToolbarComponent {
   readonly loadFromStorage = output<void>();
   readonly align = output<AlignMode>();
   readonly linkRoutingChange = output<LinkRouting>();
+  readonly bringToFront = output<void>();
+  readonly sendToBack = output<void>();
+  readonly lockUnlock = output<void>();
 
   protected show(key: keyof GraphEditorToolbarConfig): boolean {
     return this.toolbarConfig()?.[key] !== false;
@@ -146,6 +151,18 @@ export class GraphToolbarComponent {
   /** Emit loadFromStorage. */
   protected onLoadFromStorage(): void {
     this.loadFromStorage.emit();
+  }
+
+  protected onBringToFront(): void {
+    this.bringToFront.emit();
+  }
+
+  protected onSendToBack(): void {
+    this.sendToBack.emit();
+  }
+
+  protected onLockUnlock(): void {
+    this.lockUnlock.emit();
   }
 
   /** Trigger file input click. */

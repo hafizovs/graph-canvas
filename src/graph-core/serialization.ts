@@ -37,6 +37,8 @@ export interface NodeDto {
   childLinkIds?: LinkId[];
   originalPositions?: Record<NodeId, { x: number; y: number }>;
   scale?: number;
+  zIndex?: number;
+  locked?: boolean;
   ports: PortDto[];
 }
 
@@ -49,6 +51,8 @@ export interface LinkDto {
   targetPortId: PortId;
   points?: Array<{ x: number; y: number }>;
   routing?: LinkRouting;
+  zIndex?: number;
+  locked?: boolean;
 }
 
 /**
@@ -76,6 +80,8 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
       shape: node.shape,
       rotation: node.rotation,
       ...(node.customShapeId != null && { customShapeId: node.customShapeId }),
+      ...(node.zIndex !== 0 && { zIndex: node.zIndex }),
+      ...(node.locked && { locked: node.locked }),
       ports: node.ports.map((p) => ({
         id: p.id,
         nodeId: p.nodeId,
@@ -114,6 +120,12 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
     }
     if (link.routing !== 'straight') {
       dto.routing = link.routing;
+    }
+    if (link.zIndex !== 0) {
+      dto.zIndex = link.zIndex;
+    }
+    if (link.locked) {
+      dto.locked = link.locked;
     }
     return dto;
   });
@@ -164,6 +176,8 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
         childLinkIds: nd.childLinkIds,
         originalPositions,
         scale: nd.scale,
+        zIndex: nd.zIndex,
+        locked: nd.locked,
         ports,
       });
     } else {
@@ -178,6 +192,8 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
         rotation: nd.rotation,
         nodeType: nd.nodeType,
         customShapeId: nd.customShapeId,
+        zIndex: nd.zIndex,
+        locked: nd.locked,
         ports,
       });
     }
@@ -193,6 +209,8 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
         targetPortId: ld.targetPortId,
         points: ld.points,
         routing: ld.routing,
+        zIndex: ld.zIndex,
+        locked: ld.locked,
       })
     );
   }

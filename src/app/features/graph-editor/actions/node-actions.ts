@@ -33,6 +33,9 @@ export class AddNodeAction implements GraphEditorAction {
     const { x, y } = ctx.state.snapToGridEnabled()
       ? ctx.coordinate.snapToGrid(centerX, centerY)
       : { x: centerX, y: centerY };
+    const maxZ = d.nodes.length > 0
+      ? Math.max(...d.nodes.map((n) => n.zIndex ?? 0))
+      : -1;
     const node = new Node({
       id: nodeId,
       x,
@@ -40,6 +43,7 @@ export class AddNodeAction implements GraphEditorAction {
       width: 120,
       height: 60,
       label: `Node ${ctx.state.getNodeIdCounter()}`,
+      zIndex: maxZ + 1,
       ports: [],
     });
     node.addPort(
@@ -83,6 +87,9 @@ export class AddNodeFromPaletteAction implements GraphEditorAction {
       ? ctx.coordinate.snapToGrid(this.svgX, this.svgY)
       : { x: this.svgX, y: this.svgY };
     const nodeId = `n${ctx.state.incrementNodeIdCounter()}` as NodeId;
+    const maxZ = d.nodes.length > 0
+      ? Math.max(...d.nodes.map((n) => n.zIndex ?? 0))
+      : -1;
     const node = new Node({
       id: nodeId,
       x,
@@ -91,6 +98,7 @@ export class AddNodeFromPaletteAction implements GraphEditorAction {
       height: 60,
       label: `Node ${ctx.state.getNodeIdCounter()}`,
       shape: this.shape,
+      zIndex: maxZ + 1,
       ...(this.shape === 'custom' && this.customShapeId != null && { customShapeId: this.customShapeId }),
       ports: [],
     });
@@ -132,7 +140,7 @@ export class MoveNodesAction implements GraphEditorAction {
     if (!d) return;
     for (const [nodeId, pos] of this.initialPositions) {
       const n = d.getNode(nodeId);
-      if (n) {
+      if (n && !n.locked) {
         const newX = pos.x + this.dx;
         const newY = pos.y + this.dy;
         const { x, y } = ctx.state.snapToGridEnabled()
@@ -157,7 +165,7 @@ export class RotateNodesAction implements GraphEditorAction {
     if (!d || nodeIds.size === 0) return;
     for (const nodeId of nodeIds) {
       const n = d.getNode(nodeId);
-      if (n) n.setRotation((n.rotation ?? 0) + this.angleDeg);
+      if (n && !n.locked) n.setRotation((n.rotation ?? 0) + this.angleDeg);
     }
     ctx.state.setDiagram(d, true);
   }
@@ -203,7 +211,7 @@ export class AlignNodesAction implements GraphEditorAction {
 
     if (isAlignMode) {
       for (const n of nodes) {
-        if (n.id === refId) continue;
+        if (n.id === refId || n.locked) continue;
         if (this.mode === 'alignLeft') {
           const { x, y } = snap(ref.x, n.y);
           n.setPosition(x, y);
@@ -250,6 +258,10 @@ export class AlignNodesAction implements GraphEditorAction {
         const gap = (bboxWidth - totalWidth) / (sorted.length - 1);
         let x = minX;
         for (const n of sorted) {
+          if (n.locked) {
+            x += n.width + gap;
+            continue;
+          }
           const { x: sx, y } = snap(x, n.y);
           n.setPosition(sx, y);
           x += n.width + gap;
@@ -261,6 +273,10 @@ export class AlignNodesAction implements GraphEditorAction {
         const gap = (bboxHeight - totalHeight) / (sorted.length - 1);
         let y = minY;
         for (const n of sorted) {
+          if (n.locked) {
+            y += n.height + gap;
+            continue;
+          }
           const { x, y: sy } = snap(n.x, y);
           n.setPosition(x, sy);
           y += n.height + gap;
@@ -315,6 +331,9 @@ export class GroupNodesAction implements GraphEditorAction {
     const groupHeight = maxY - minY + 2 * padding;
 
     const groupId = `g${ctx.state.incrementNodeIdCounter()}` as NodeId;
+    const maxZ = d.nodes.length > 0
+      ? Math.max(...d.nodes.map((n) => n.zIndex ?? 0))
+      : -1;
     const groupNode = new GroupNode({
       id: groupId,
       x: groupX,
@@ -326,6 +345,7 @@ export class GroupNodesAction implements GraphEditorAction {
       childLinkIds: [],
       originalPositions,
       scale: 1,
+      zIndex: maxZ + 1,
       ports: [],
     });
 
@@ -499,7 +519,7 @@ export class ResizeGroupNodeAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     const groupNode = d?.getNode(this.groupId);
-    if (!d || !groupNode || !(groupNode instanceof GroupNode)) return;
+    if (!d || !groupNode || !(groupNode instanceof GroupNode) || groupNode.locked) return;
     groupNode.width = Math.max(this.newWidth, 100);
     groupNode.height = Math.max(this.newHeight, 80);
     groupNode.updateScale();
