@@ -175,6 +175,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** True when all selected nodes and links are locked (for Lock/Unlock button label). */
   protected readonly hasLockedSelection = computed(() => {
+    this.renderTick(); // Track render tick so computed updates after in-place lock mutations
     const d = this.state.getDiagram();
     if (!d) return false;
     const nodeIds = this.state.selectedNodeIds();
@@ -436,11 +437,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.paletteDropPreview.set(null);
   }
 
-  /** Start pending drag or capture pointer for click. */
+  /** Start pending drag or capture pointer for click. Locked nodes can be selected but not dragged. */
   protected onNodePointerDown(e: NodePointerEvent): void {
     if (this.state.linkingFrom()) return;
     if (!this.interactionEnabled('nodeDrag')) return;
-    if (e.node.locked) return;
     const pt = this.coordinate.clientToSvg(
       this.svgContainer?.nativeElement,
       e.event.clientX,
@@ -465,6 +465,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const dx = pt.x - (e.node.x + this._pendingDrag.startX);
       const dy = pt.y - (e.node.y + this._pendingDrag.startY);
       if (
+        !e.node.locked &&
         this.interactionEnabled('nodeDrag') &&
         Math.sqrt(dx * dx + dy * dy) > GraphEditorComponent.DRAG_THRESHOLD_PX
       ) {
