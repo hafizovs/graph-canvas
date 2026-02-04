@@ -35,3 +35,17 @@
 .segment-handle {
   fill: var(--segment-handle-fill, #9cf);
 }
+
+.waypoint-hit {
+  cursor: grab;
+  vector-effect: non-scaling-stroke;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.waypoint-handle-selected {
+  stroke: var(--waypoint-selected-stroke, #06c);
+  stroke-width: 3;
+}

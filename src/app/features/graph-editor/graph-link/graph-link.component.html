@@ -10,6 +10,8 @@
   (pointerdown)="onPathPointerDown($event)"
   (click)="onLinkClick($event)"
   (contextmenu)="onLinkContextMenu($event)"
+  (mouseenter)="hovered.set(true)"
+  (mouseleave)="hovered.set(false)"
 />
 <!-- Visible path -->
 <svg:path
@@ -22,25 +24,41 @@
   vector-effect="non-scaling-stroke"
   pointer-events="none"
 />
-@if (selected() && !previewTarget()) {
+@if ((selected() || hovered()) && !previewTarget()) {
   @for (seg of segmentMidpoints(); track seg.insertIndex) {
-    <circle
+    <svg:circle
       class="segment-handle"
       [attr.cx]="seg.x"
       [attr.cy]="seg.y"
       r="5"
       (pointerdown)="onSegmentMidpointPointerDown($event, seg)"
+      (mouseenter)="hovered.set(true)"
+      (mouseleave)="hovered.set(false)"
     />
   }
   @for (point of waypoints(); track $index) {
-    <circle
-      class="waypoint-handle"
-      [attr.cx]="point.x"
-      [attr.cy]="point.y"
-      r="5"
-      (pointerdown)="onWaypointPointerDown($event, $index)"
-      (dblclick)="onWaypointDoubleClick($index)"
-      (contextmenu)="onWaypointContextMenu($event, $index)"
-    />
+    <svg:g
+      (mouseenter)="hovered.set(true)"
+      (mouseleave)="hovered.set(false)"
+    >
+      <svg:circle
+        class="waypoint-hit"
+        [attr.cx]="point.x"
+        [attr.cy]="point.y"
+        r="12"
+        fill="transparent"
+        (pointerdown)="onWaypointPointerDown($event, $index)"
+        (dblclick)="onWaypointDoubleClick($index)"
+        (contextmenu)="onWaypointContextMenu($event, $index)"
+      />
+      <svg:circle
+        class="waypoint-handle"
+        [class.waypoint-handle-selected]="selectedWaypointIndex() === $index"
+        [attr.cx]="point.x"
+        [attr.cy]="point.y"
+        r="5"
+        pointer-events="none"
+      />
+    </svg:g>
   }
 }

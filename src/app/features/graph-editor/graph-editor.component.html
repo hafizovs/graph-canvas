@@ -84,6 +84,7 @@
               [diagram]="diagram()!"
               [renderTick]="renderTick()"
               [selected]="selectedLinkIds().has(link.id)"
+              [selectedWaypointIndex]="selectedWaypointIndexForLink(link.id)"
               (linkClick)="onLinkSelect($event)"
               (waypointPointerDown)="onWaypointPointerDown($event)"
               (pathPointerDown)="onPathPointerDown($event)"

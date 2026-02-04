@@ -138,6 +138,15 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     hasWaypoints: boolean;
   } | null>(null);
 
+  /** Selected waypoint (single); null when link or segment is selected as a whole. */
+  protected readonly selectedWaypoint = signal<{ linkId: LinkId; pointIndex: number } | null>(null);
+
+  /** Index of selected waypoint for a given link, or null. */
+  protected selectedWaypointIndexForLink(linkId: LinkId): number | null {
+    const sw = this.selectedWaypoint();
+    return sw?.linkId === linkId ? sw.pointIndex : null;
+  }
+
   private _palettePointerMove = (e: PointerEvent) => this.onPalettePointerMove(e);
   private _palettePointerUp = (e: PointerEvent) => this.onPalettePointerUp(e);
   private _waypointPointerMove = (e: PointerEvent) => this.onWaypointPointerMove(e);
@@ -546,8 +555,9 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     return `M ${sx} ${sy} L ${px} ${sy} L ${px} ${py}`;
   }
 
-  /** Select link (single or Shift-toggle). */
+  /** Select link (single or Shift-toggle). Click on segment = select whole link, clear single waypoint selection. */
   protected onLinkSelect(payload: { link: Link; shiftKey: boolean }): void {
+    this.selectedWaypoint.set(null);
     const id = payload.link.id;
     if (payload.shiftKey) {
       this.state.toggleLinkSelection(id);
@@ -556,9 +566,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** Start waypoint drag. Undo pushed on first move. */
+  /** Start waypoint drag; select this waypoint and ensure link is selected. Undo pushed on first move. */
   protected onWaypointPointerDown(payload: WaypointPointerPayload): void {
     if (this.state.linkingFrom()) return;
+    this.selectedWaypoint.set({ linkId: payload.link.id, pointIndex: payload.pointIndex });
+    this.state.setLinkSelection(new Set([payload.link.id]));
     this.undoRedo.pushState();
     this._draggingWaypoint = {
       linkId: payload.link.id,
@@ -814,6 +826,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       target.closest('.link-path') ||
       target.closest('.link-path-hit') ||
       target.closest('.waypoint-handle') ||
+      target.closest('.waypoint-hit') ||
       target.closest('.segment-handle')
     )
       return;
@@ -845,6 +858,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       targetEl.setPointerCapture?.(event.pointerId);
       return;
     }
+    this.selectedWaypoint.set(null);
     this.state.clearSelection();
   }
 
@@ -876,6 +890,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       return;
     }
     if (event.key === 'Escape') {
+      this.selectedWaypoint.set(null);
       this.state.clearSelection();
       return;
     }
@@ -914,6 +929,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
 
     if (event.key === 'Delete' || event.key === 'Backspace') {
+      const sw = this.selectedWaypoint();
+      if (sw !== null) {
+        event.preventDefault();
+        this.undoRedo.pushState();
+        this.operations.removeLinkWaypoint(sw.linkId, sw.pointIndex);
+        this.selectedWaypoint.set(null);
+        return;
+      }
       this.onDeleteSelection();
       return;
     }

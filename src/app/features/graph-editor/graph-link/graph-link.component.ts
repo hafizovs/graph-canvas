@@ -4,6 +4,7 @@ import {
   input,
   output,
   computed,
+  signal,
   NO_ERRORS_SCHEMA,
 } from '@angular/core';
 import type { Diagram, Link, PointLike } from '../../../../graph-core';
@@ -43,6 +44,11 @@ export class GraphLinkComponent {
   /** When diagram is mutated in place (e.g. node rotation), bump so path recomputes. */
   readonly renderTick = input<number>(0);
   readonly selected = input<boolean>(false);
+  /** Which waypoint index is selected (for this link); null if none. */
+  readonly selectedWaypointIndex = input<number | null>(null);
+
+  /** True when the pointer is over the link (path or handles). */
+  protected readonly hovered = signal(false);
 
   readonly linkClick = output<{ link: Link; shiftKey: boolean }>();
   readonly waypointPointerDown = output<WaypointPointerPayload>();
