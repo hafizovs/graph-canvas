@@ -1,12 +1,12 @@
 import type { DiagramJson } from '../serialization';
 
-/** Empty diagram: no nodes, no links */
+/** Empty diagram: no nodes, no links. Used for tests and initial load. */
 export const MOCK_DIAGRAM_EMPTY: DiagramJson = {
   nodes: [],
   links: [],
 };
 
-/** Single node, no links */
+/** Single node with input/output ports, no links. */
 export const MOCK_DIAGRAM_SINGLE_NODE: DiagramJson = {
   nodes: [
     {
@@ -25,7 +25,7 @@ export const MOCK_DIAGRAM_SINGLE_NODE: DiagramJson = {
   links: [],
 };
 
-/** Chain of 3 nodes: A → B → C (same as createSampleDiagram) */
+/** Chain of 3 nodes: A → B → C. Used as default example diagram. */
 export const MOCK_DIAGRAM_CHAIN: DiagramJson = {
   nodes: [
     {
@@ -68,7 +68,7 @@ export const MOCK_DIAGRAM_CHAIN: DiagramJson = {
   ],
 };
 
-/** Diamond: two sources (n1, n2), one middle (n3), one sink (n4). n1→n3, n2→n3, n3→n4 */
+/** Diamond topology: two sources (n1, n2), one middle (n3), one sink (n4). n1→n3, n2→n3, n3→n4. */
 export const MOCK_DIAGRAM_DIAMOND: DiagramJson = {
   nodes: [
     {

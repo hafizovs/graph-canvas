@@ -2,13 +2,22 @@ import { Node, type NodeConfig } from './node';
 import { Link } from './link';
 import type { NodeId, LinkId, PointLike, Rect } from './types';
 
-/** Configuration for creating a GroupNode. */
+/**
+ * Configuration for creating a GroupNode.
+ * Extends NodeConfig with group-specific child and scale data.
+ */
 export interface GroupNodeConfig extends NodeConfig {
+  /** IDs of nodes contained in the group. */
   childNodeIds?: NodeId[];
+  /** IDs of links contained in the group. */
   childLinkIds?: LinkId[];
+  /** Original positions of children before grouping (for ungroup restore). */
   originalPositions?: Map<NodeId, PointLike>;
+  /** Child node instances (for preview and ungroup). */
   childNodes?: Node[];
+  /** Child link instances (for ungroup). */
   childLinks?: Link[];
+  /** Preview scale factor (fit content in group bounds). */
   scale?: number;
 }
 
@@ -51,7 +60,11 @@ export class GroupNode extends Node {
     }
   }
 
-  /** Add a child node to the group. */
+  /**
+   * Add a child node to the group.
+   * @param node - Node to add as child
+   * @param originalPosition - Optional position to store for ungroup
+   */
   addChildNode(node: Node, originalPosition?: PointLike): void {
     this.childNodeIds.add(node.id);
     this.childNodes.set(node.id, node);
@@ -60,31 +73,50 @@ export class GroupNode extends Node {
     }
   }
 
-  /** Add a child link to the group. */
+  /**
+   * Add a child link to the group.
+   * @param link - Link to add as child
+   */
   addChildLink(link: Link): void {
     this.childLinkIds.add(link.id);
     this.childLinks.set(link.id, link);
   }
 
-  /** Remove a child node from the group. */
+  /**
+   * Remove a child node from the group.
+   * @param nodeId - ID of child node to remove
+   * @returns true if the child existed and was removed
+   */
   removeChildNode(nodeId: NodeId): boolean {
     this.originalPositions.delete(nodeId);
     this.childNodes.delete(nodeId);
     return this.childNodeIds.delete(nodeId);
   }
 
-  /** Remove a child link from the group. */
+  /**
+   * Remove a child link from the group.
+   * @param linkId - ID of child link to remove
+   * @returns true if the child existed and was removed
+   */
   removeChildLink(linkId: LinkId): boolean {
     this.childLinks.delete(linkId);
     return this.childLinkIds.delete(linkId);
   }
 
-  /** Get stored child node by ID. */
+  /**
+   * Get stored child node by ID.
+   * @param nodeId - Child node id
+   * @returns Node or undefined
+   */
   getChildNode(nodeId: NodeId): Node | undefined {
     return this.childNodes.get(nodeId);
   }
 
-  /** Get stored child link by ID. */
+  /**
+   * Get stored child link by ID.
+   * @param linkId - Child link id
+   * @returns Link or undefined
+   */
   getChildLink(linkId: LinkId): Link | undefined {
     return this.childLinks.get(linkId);
   }
@@ -109,24 +141,35 @@ export class GroupNode extends Node {
     return Array.from(this.childLinkIds);
   }
 
-  /** Get original position of a child node (before grouping). */
+  /**
+   * Get original position of a child node (before grouping).
+   * @param nodeId - Child node id
+   * @returns Stored position or undefined
+   */
   getOriginalPosition(nodeId: NodeId): PointLike | undefined {
     return this.originalPositions.get(nodeId);
   }
 
-  /** Check if a node is a child of this group. */
+  /**
+   * Check if a node is a child of this group.
+   * @param nodeId - Node id to check
+   */
   hasChildNode(nodeId: NodeId): boolean {
     return this.childNodeIds.has(nodeId);
   }
 
-  /** Check if a link is a child of this group. */
+  /**
+   * Check if a link is a child of this group.
+   * @param linkId - Link id to check
+   */
   hasChildLink(linkId: LinkId): boolean {
     return this.childLinkIds.has(linkId);
   }
 
   /**
-   * Calculate bounding box of all child nodes using actual positions and dimensions.
+   * Calculate bounding box of all child nodes using stored/original positions and dimensions.
    * Used for preview scaling so the full picture fits.
+   * @returns Rect encompassing all children
    */
   getBounds(): Rect {
     if (this.childNodes.size === 0) {
@@ -160,6 +203,7 @@ export class GroupNode extends Node {
   /**
    * Calculate the scale factor for preview content: fit entire bounds in the preview area.
    * Never scale up; if scale would be below MIN_PREVIEW_SCALE, we still return it (caller shows placeholder).
+   * @returns Scale factor (0..1)
    */
   calculatePreviewScale(): number {
     const bounds = this.getBounds();
@@ -185,7 +229,7 @@ export class GroupNode extends Node {
     return this.scale < GroupNode.MIN_PREVIEW_SCALE && this.childNodes.size > 0;
   }
 
-  /** Update scale factor (called after resize). */
+  /** Recompute and set scale from current bounds and size (call after resize). */
   updateScale(): void {
     this.scale = this.calculatePreviewScale();
   }

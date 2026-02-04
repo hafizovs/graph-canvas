@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import type { Diagram, Link, PointLike } from '../../../../graph-core';
 
+/** Result of finding the closest path segment to a point: segment index and projected point. */
 export interface ClosestSegmentResult {
   segIdx: number;
   projected: PointLike;

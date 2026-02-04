@@ -18,7 +18,11 @@ const FIT_PADDING = 40;
 export class GraphViewportService {
   constructor(private readonly state: GraphEditorStateService) {}
 
-  /** Pan the view by dx, dy in SVG coordinates. */
+  /**
+   * Pan the view by dx, dy in SVG coordinates.
+   * @param dx - Horizontal delta (positive = move view left)
+   * @param dy - Vertical delta (positive = move view up)
+   */
   pan(dx: number, dy: number): void {
     const vb = this.state.viewBox();
     this.state.setViewBox({
@@ -31,6 +35,8 @@ export class GraphViewportService {
   /**
    * Zoom by factor around an optional center point (SVG coords).
    * Factor > 1 zooms in, < 1 zooms out. If center omitted, uses viewBox center.
+   * @param factor - Zoom factor
+   * @param centerInSvg - Optional center point in diagram coordinates
    */
   zoomAt(factor: number, centerInSvg?: { x: number; y: number }): void {
     const vb = this.state.viewBox();
@@ -64,6 +70,10 @@ export class GraphViewportService {
   /**
    * Set viewBox so the given node is centered with padding.
    * Preserves aspect ratio from containerWidth/containerHeight if provided.
+   * @param nodeId - Node to center
+   * @param padding - Padding around the node
+   * @param containerWidth - Optional container width for aspect ratio
+   * @param containerHeight - Optional container height for aspect ratio
    */
   zoomToNode(
     nodeId: NodeId,
@@ -85,7 +95,10 @@ export class GraphViewportService {
   }
 
   /**
-   * Set viewBox to fit selected nodes with padding. If no selection, does nothing (or could fit all).
+   * Set viewBox to fit selected nodes with padding. If no selection, does nothing.
+   * @param padding - Padding around the selection
+   * @param containerWidth - Optional container width
+   * @param containerHeight - Optional container height
    */
   zoomToSelection(
     padding: number = FIT_PADDING,
@@ -103,6 +116,9 @@ export class GraphViewportService {
   /**
    * Fit all nodes (or default rect) in view with padding.
    * Uses container aspect ratio when containerWidth and containerHeight are provided.
+   * @param padding - Padding around content
+   * @param containerWidth - Optional container width
+   * @param containerHeight - Optional container height
    */
   fitToView(
     padding: number = FIT_PADDING,

@@ -1,12 +1,19 @@
 import { Point } from './point';
 import type { PortId, PortSide, PortType, Rect } from './types';
 
-/** Configuration for creating a Port. */
+/**
+ * Configuration for creating a Port.
+ */
 export interface PortConfig {
+  /** Unique port identifier (e.g. n1-in, n1-out). */
   id: PortId;
+  /** ID of the node this port belongs to. */
   nodeId: string;
+  /** Edge of the node the port is attached to. */
   side: PortSide;
+  /** Offset along the side (e.g. from top for left/right sides). */
   offset: number;
+  /** Input (incoming) or output (outgoing). */
   type: PortType;
 }
 

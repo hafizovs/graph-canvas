@@ -52,6 +52,14 @@ export class GraphEditorStateService {
   /** Default link routing for newly created links (used by createLink). */
   readonly defaultLinkRouting = signal<LinkRouting>('orthogonal');
 
+  /** True while Space is held (for pan-with-left-drag cursor). */
+  readonly spaceKeyDown = signal(false);
+
+  /** Set Space key state (used by keyboard directive). */
+  setSpaceKeyDown(value: boolean): void {
+    this.spaceKeyDown.set(value);
+  }
+
   /** Set snap-to-grid on or off. */
   setSnapToGridEnabled(value: boolean): void {
     this.snapToGridEnabled.set(value);

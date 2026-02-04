@@ -1,0 +1,178 @@
+import { Link, Point } from '../../../../graph-core';
+import type { LinkId, LinkRouting, PortId } from '../../../../graph-core';
+import type { ActionContext } from './action-context';
+import type { GraphEditorAction } from './graph-editor-action';
+
+/** Create a link from source port to target port (target must be input, no duplicate). */
+export class CreateLinkAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = true;
+
+  constructor(
+    private readonly sourcePortId: PortId,
+    private readonly targetPortId: PortId,
+    private readonly targetNodeId: string
+  ) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    if (!d) return;
+    const hasExisting =
+      d.links.some(
+        (l) => l.sourcePortId === this.sourcePortId && l.targetPortId === this.targetPortId
+      ) || d.links.some((l) => l.targetPortId === this.targetPortId);
+    if (hasExisting) return;
+    const linkId = `l${ctx.state.incrementLinkIdCounter()}`;
+    d.addLink(
+      new Link({
+        id: linkId,
+        sourcePortId: this.sourcePortId,
+        targetPortId: this.targetPortId,
+        routing: ctx.state.defaultLinkRouting(),
+      })
+    );
+    ctx.state.setDiagram(d, true);
+  }
+}
+
+/** Set routing for all selected links. */
+export class SetSelectedLinksRoutingAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = true;
+
+  constructor(private readonly routing: LinkRouting) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    const linkIds = ctx.state.selectedLinkIds();
+    if (!d || linkIds.size === 0) return;
+    for (const linkId of linkIds) {
+      const link = d.getLink(linkId);
+      if (link) link.routing = this.routing;
+    }
+    ctx.state.setDiagram(d, true);
+  }
+}
+
+/** Add a waypoint to a link at the given index. */
+export class AddLinkWaypointAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = true;
+
+  constructor(
+    private readonly linkId: LinkId,
+    private readonly index: number,
+    private readonly x: number,
+    private readonly y: number
+  ) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    const link = d?.getLink(this.linkId);
+    if (!d || !link) return;
+    let px = this.x;
+    let py = this.y;
+    if (ctx.state.snapToGridEnabled()) {
+      const snapped = ctx.coordinate.snapToGrid(this.x, this.y);
+      px = snapped.x;
+      py = snapped.y;
+    }
+    link.points.splice(this.index, 0, new Point(px, py));
+    ctx.state.setDiagram(d, true);
+  }
+}
+
+/** Move an existing waypoint; caller pushes undo at drag start. */
+export class MoveLinkWaypointAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = false;
+
+  constructor(
+    private readonly linkId: LinkId,
+    private readonly index: number,
+    private readonly x: number,
+    private readonly y: number
+  ) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    const link = d?.getLink(this.linkId);
+    if (!d || !link || this.index < 0 || this.index >= link.points.length) return;
+    let px = this.x;
+    let py = this.y;
+    if (ctx.state.snapToGridEnabled()) {
+      const snapped = ctx.coordinate.snapToGrid(this.x, this.y);
+      px = snapped.x;
+      py = snapped.y;
+    }
+    link.points[this.index] = new Point(px, py);
+    ctx.state.incrementRenderTick();
+  }
+}
+
+/** Remove a waypoint from a link. */
+export class RemoveLinkWaypointAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = true;
+
+  constructor(
+    private readonly linkId: LinkId,
+    private readonly index: number
+  ) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    const link = d?.getLink(this.linkId);
+    if (!d || !link || this.index < 0 || this.index >= link.points.length) return;
+    link.points.splice(this.index, 1);
+    ctx.state.setDiagram(d, true);
+  }
+}
+
+/** Move a segment by (dx, dy); caller pushes undo at drag start. */
+export class MoveLinkSegmentAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = false;
+
+  constructor(
+    private readonly linkId: LinkId,
+    private readonly segmentIndex: number,
+    private readonly dx: number,
+    private readonly dy: number
+  ) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    const link = d?.getLink(this.linkId);
+    if (!d || !link) return;
+    const n = link.points.length;
+    if (n === 0) return;
+    if (this.segmentIndex === 0) {
+      link.points[0] = new Point(link.points[0].x + this.dx, link.points[0].y + this.dy);
+    } else if (this.segmentIndex >= n) {
+      link.points[n - 1] = new Point(
+        link.points[n - 1].x + this.dx,
+        link.points[n - 1].y + this.dy
+      );
+    } else {
+      link.points[this.segmentIndex - 1] = new Point(
+        link.points[this.segmentIndex - 1].x + this.dx,
+        link.points[this.segmentIndex - 1].y + this.dy
+      );
+      link.points[this.segmentIndex] = new Point(
+        link.points[this.segmentIndex].x + this.dx,
+        link.points[this.segmentIndex].y + this.dy
+      );
+    }
+    ctx.state.incrementRenderTick();
+  }
+}
+
+/** Clear all waypoints from a link. */
+export class ClearLinkWaypointsAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = true;
+
+  constructor(private readonly linkId: LinkId) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    const link = d?.getLink(this.linkId);
+    if (!d || !link || link.points.length === 0) return;
+    link.points.length = 0;
+    ctx.state.setDiagram(d, true);
+  }
+}

@@ -22,13 +22,17 @@ export class Diagram {
     return Array.from(this._links.values());
   }
 
-  /** Add a node. Replaces existing node with same id. */
+  /**
+   * Add a node. Replaces existing node with same id.
+   * @param node - Node to add
+   */
   addNode(node: Node): void {
     this._nodes.set(node.id, node);
   }
 
   /**
    * Remove a node and any links connected to its ports.
+   * @param id - Node id to remove
    * @returns true if the node existed and was removed
    */
   removeNode(id: NodeId): boolean {
@@ -44,22 +48,37 @@ export class Diagram {
     return this._nodes.delete(id);
   }
 
-  /** Get node by id. */
+  /**
+   * Get node by id.
+   * @param id - Node id
+   * @returns Node or undefined
+   */
   getNode(id: NodeId): Node | undefined {
     return this._nodes.get(id);
   }
 
-  /** Add a link. Replaces existing link with same id. */
+  /**
+   * Add a link. Replaces existing link with same id.
+   * @param link - Link to add
+   */
   addLink(link: Link): void {
     this._links.set(link.id, link);
   }
 
-  /** Remove link by id. Returns true if removed. */
+  /**
+   * Remove link by id.
+   * @param id - Link id to remove
+   * @returns true if the link existed and was removed
+   */
   removeLink(id: LinkId): boolean {
     return this._links.delete(id);
   }
 
-  /** Get link by id. */
+  /**
+   * Get link by id.
+   * @param id - Link id
+   * @returns Link or undefined
+   */
   getLink(id: LinkId): Link | undefined {
     return this._links.get(id);
   }
@@ -67,6 +86,7 @@ export class Diagram {
   /**
    * Get absolute position of a port by id (searches all nodes).
    * Accounts for node rotation: port position is rotated around node center.
+   * @param portId - Port id
    * @returns Point in diagram coordinates, or undefined if port not found
    */
   getPortPosition(portId: PortId): Point | undefined {

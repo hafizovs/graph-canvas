@@ -1,18 +1,26 @@
 /**
- * 2D point with x, y coordinates. Use for plain data; use Point class from point.ts for instances with helpers.
+ * 2D point with x, y coordinates.
+ * Use for plain data; use {@link Point} from point.ts for instances with helpers.
  */
 export interface PointLike {
+  /** X coordinate. */
   x: number;
+  /** Y coordinate. */
   y: number;
 }
 
 /**
- * Rectangle with position and dimensions. Used by Node.getRect() and port position calculation.
+ * Rectangle with position and dimensions.
+ * Used by {@link Node.getRect} and port position calculation.
  */
 export interface Rect {
+  /** Left edge. */
   x: number;
+  /** Top edge. */
   y: number;
+  /** Width. */
   width: number;
+  /** Height. */
   height: number;
 }
 

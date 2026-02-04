@@ -9,5 +9,6 @@ export {
   type SelectionRect,
 } from './graph-editor-state.service';
 export { GraphUndoRedoService } from './graph-undo-redo.service';
-export { GraphOperationsService } from './graph-operations.service';
+export { GraphOperationsService, type AlignMode } from './graph-operations.service';
 export { GraphViewportService } from './graph-viewport.service';
+export { GraphResizeService, type ResizeHandle } from './graph-resize.service';

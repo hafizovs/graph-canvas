@@ -5,12 +5,19 @@ import type { Diagram } from './diagram';
 /** Routing style for links: straight (free angles) or orthogonal (H/V only). */
 export type LinkRouting = 'straight' | 'orthogonal';
 
-/** Configuration for creating a Link. */
+/**
+ * Configuration for creating a Link.
+ */
 export interface LinkConfig {
+  /** Unique link identifier. */
   id: LinkId;
+  /** Source (output) port id. */
   sourcePortId: PortId;
+  /** Target (input) port id. */
   targetPortId: PortId;
+  /** Optional waypoints for polyline; otherwise straight between ports. */
   points?: Array<{ x: number; y: number }>;
+  /** Path routing; defaults to 'straight'. */
   routing?: LinkRouting;
 }
 

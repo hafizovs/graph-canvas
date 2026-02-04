@@ -5,7 +5,6 @@ import {
   OnDestroy,
   ViewChild,
   ElementRef,
-  HostListener,
   inject,
   input,
   signal,
@@ -42,6 +41,7 @@ import { GraphLinkGeometryService } from './services/graph-link-geometry.service
 import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
 import { GraphResizeService } from './services/graph-resize.service';
+import { GraphEditorKeyboardDirective } from './directives/graph-editor-keyboard.directive';
 import { serializeDiagram } from '../../../graph-core';
 import type {
   PathPointerPayload,
@@ -50,14 +50,26 @@ import type {
 } from './graph-link/graph-link.component';
 
 /**
- * Main graph editor container. Coordinates state, undo/redo, operations, and coordinate services.
- * Handles pointer/keyboard events and delegates mutations to GraphOperationsService; drag state is local.
+ * Main graph editor container. Renders the diagram (nodes, links, grid), coordinates state,
+ * undo/redo, operations, and coordinate/viewport services. Handles pointer events (node/link drag,
+ * palette drop, pan, rubber-band selection, waypoints) and delegates mutations to
+ * {@link GraphOperationsService}. Keyboard shortcuts are handled by
+ * {@link GraphEditorKeyboardDirective}. Drag state (pending drag, active drag, waypoint/segment
+ * drag) is kept in the component; view state (selection, linking preview, viewBox) is in
+ * {@link GraphEditorStateService}.
  */
 @Component({
   selector: 'app-graph-editor',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [GraphLinkComponent, GraphNodeComponent, GraphGroupNodeComponent, GraphPaletteComponent, GraphToolbarComponent],
+  imports: [
+    GraphLinkComponent,
+    GraphNodeComponent,
+    GraphGroupNodeComponent,
+    GraphPaletteComponent,
+    GraphToolbarComponent,
+    GraphEditorKeyboardDirective,
+  ],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
 })
@@ -181,7 +193,6 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this._draggingWaypoint = null;
   }
 
-  private _spaceKey = false;
   private _panning: { startClientX: number; startClientY: number; startViewBoxX: number; startViewBoxY: number; pointerId: number; target: Element } | null = null;
   private _rubberBand: { x1: number; y1: number; pointerId: number; target: Element } | null = null;
 
@@ -834,7 +845,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
     const svg = this.svgContainer?.nativeElement;
     const isMiddle = event.button === 1;
-    const isLeftWithSpace = event.button === 0 && this._spaceKey;
+    const isLeftWithSpace = event.button === 0 && this.state.spaceKeyDown();
     const isShiftLeft = event.button === 0 && event.shiftKey;
 
     if ((isMiddle || isLeftWithSpace) && svg) {
@@ -872,95 +883,21 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.viewport.zoomAt(factor, center);
   }
 
-  /** Track Space for pan-with-left-drag. */
-  @HostListener('document:keyup', ['$event'])
-  protected onKeyUp(event: KeyboardEvent): void {
-    if (event.key === ' ') this._spaceKey = false;
+  /** Called by keyboard directive on Escape; clear selected waypoint (directive already cleared selection). */
+  protected onEscapeKey(): void {
+    this.selectedWaypoint.set(null);
   }
 
-  /** Handle Escape (clear selection), Space (pan mode), Ctrl+A (select all), etc. */
-  @HostListener('document:keydown', ['$event'])
-  protected onKeyDown(event: KeyboardEvent): void {
-    const tag = (event.target as Element)?.tagName;
-    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-    if (event.key === ' ') {
-      this._spaceKey = true;
-      event.preventDefault();
-      return;
-    }
-    if (event.key === 'Escape') {
+  /** Called by keyboard directive on Delete/Backspace; remove waypoint or delete selection. */
+  protected onDeleteKey(): void {
+    const sw = this.selectedWaypoint();
+    if (sw !== null) {
+      this.undoRedo.pushState();
+      this.operations.removeLinkWaypoint(sw.linkId, sw.pointIndex);
       this.selectedWaypoint.set(null);
-      this.state.clearSelection();
       return;
     }
-
-    if (event.key === 'a' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      this.state.selectAllNodesAndLinks();
-      return;
-    }
-
-    if (event.key === 'c' && (event.ctrlKey || event.metaKey)) {
-      this.operations.copy();
-      return;
-    }
-
-    if (event.key === 'v' && (event.ctrlKey || event.metaKey)) {
-      event.preventDefault();
-      this.operations.paste();
-      return;
-    }
-
-    if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
-      event.preventDefault();
-      this.undoRedo.undo();
-      return;
-    }
-
-    if (
-      (event.key === 'y' && (event.ctrlKey || event.metaKey)) ||
-      (event.key === 'z' && event.ctrlKey && event.shiftKey) ||
-      (event.key === 'z' && event.metaKey && event.shiftKey)
-    ) {
-      event.preventDefault();
-      this.undoRedo.redo();
-      return;
-    }
-
-    if (event.key === 'Delete' || event.key === 'Backspace') {
-      const sw = this.selectedWaypoint();
-      if (sw !== null) {
-        event.preventDefault();
-        this.undoRedo.pushState();
-        this.operations.removeLinkWaypoint(sw.linkId, sw.pointIndex);
-        this.selectedWaypoint.set(null);
-        return;
-      }
-      this.onDeleteSelection();
-      return;
-    }
-
-    // KeyR = physical R key (works with any layout, e.g. Russian); Shift+R = CCW
-    if (event.code === 'KeyR' && !event.ctrlKey && !event.metaKey && this.selectedNodeIds().size > 0) {
-      event.preventDefault();
-      this.operations.rotateSelectedNodes(event.shiftKey ? -90 : 90);
-      return;
-    }
-
-    // Ctrl+G / Cmd+G = Group selected nodes
-    if (event.key === 'g' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
-      event.preventDefault();
-      this.onGroup();
-      return;
-    }
-
-    // Ctrl+Shift+G / Cmd+Shift+G = Ungroup
-    if (event.key === 'G' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
-      event.preventDefault();
-      this.onUngroup();
-      return;
-    }
+    this.onDeleteSelection();
   }
 
   /** Undo one step. */
@@ -975,7 +912,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Whether pan mode is active (Space or middle-drag) for cursor styling. */
   protected get isPanMode(): boolean {
-    return this._spaceKey || this._panning !== null;
+    return this.state.spaceKeyDown() || this._panning !== null;
   }
 
   /** Normalized selection rect for drawing (x, y, width, height). */

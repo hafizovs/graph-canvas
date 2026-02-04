@@ -7,7 +7,9 @@ import { Link } from './link';
 import { Port } from './port';
 import type { NodeId, LinkId, PortId } from './types';
 
-/** JSON-serializable port data (for save/load and paste). */
+/**
+ * JSON-serializable port data for save/load and paste.
+ */
 export interface PortDto {
   id: PortId;
   nodeId: string;
@@ -16,7 +18,10 @@ export interface PortDto {
   type: PortType;
 }
 
-/** JSON-serializable node data (for save/load and paste). */
+/**
+ * JSON-serializable node data for save/load and paste.
+ * Includes group-specific fields when nodeType is 'group'.
+ */
 export interface NodeDto {
   id: NodeId;
   x: number;
@@ -35,7 +40,9 @@ export interface NodeDto {
   ports: PortDto[];
 }
 
-/** JSON-serializable link data (for save/load and paste). */
+/**
+ * JSON-serializable link data for save/load and paste.
+ */
 export interface LinkDto {
   id: LinkId;
   sourcePortId: PortId;
@@ -44,7 +51,9 @@ export interface LinkDto {
   routing?: LinkRouting;
 }
 
-/** JSON-serializable diagram data; format for file storage and undo/redo snapshots. */
+/**
+ * JSON-serializable diagram data; format for file storage and undo/redo snapshots.
+ */
 export interface DiagramJson {
   nodes: NodeDto[];
   links: LinkDto[];

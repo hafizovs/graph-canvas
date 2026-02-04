@@ -1,302 +1,74 @@
 import { Injectable } from '@angular/core';
-import {
-  Diagram,
-  Node,
-  GroupNode,
-  Link,
-  Port,
-  Point,
-  deserializeDiagram,
-  serializeDiagram,
-  cloneDiagramJsonForPaste,
-} from '../../../../graph-core';
-import type { DiagramJson } from '../../../../graph-core';
-import type { LinkId, LinkRouting, NodeId, NodeShape, PortId, PortSide } from '../../../../graph-core';
+import { GroupNode } from '../../../../graph-core';
+import type { LinkId, LinkRouting, NodeId, NodeShape, PortId } from '../../../../graph-core';
 import { GraphEditorStateService } from './graph-editor-state.service';
-import { GraphUndoRedoService } from './graph-undo-redo.service';
-import { GraphCoordinateService } from './graph-coordinate.service';
-import { GraphLinkGeometryService } from './graph-link-geometry.service';
+import { GraphEditorActionDispatcher } from '../actions/action-dispatcher.service';
+import {
+  AddNodeAction,
+  AddNodeFromPaletteAction,
+  MoveNodesAction,
+  RotateNodesAction,
+  AlignNodesAction,
+  GroupNodesAction,
+  UngroupNodeAction,
+  ResizeGroupNodeAction,
+  CreateLinkAction,
+  SetSelectedLinksRoutingAction,
+  AddLinkWaypointAction,
+  MoveLinkWaypointAction,
+  RemoveLinkWaypointAction,
+  MoveLinkSegmentAction,
+  ClearLinkWaypointsAction,
+  CopyAction,
+  PasteAction,
+  DeleteSelectionAction,
+} from '../actions';
+import type { AlignMode } from '../actions';
 
-const PASTE_OFFSET = 20;
-
-/** Modes for aligning or distributing selected nodes (toolbar, Draw.io-style). */
-export type AlignMode =
-  | 'alignLeft'
-  | 'alignCenterH'
-  | 'alignRight'
-  | 'alignTop'
-  | 'alignMiddleV'
-  | 'alignBottom'
-  | 'distributeH'
-  | 'distributeV';
+/** Re-export for consumers that import from the operations service. */
+export type { AlignMode };
 
 /**
- * High-level mutating operations on the graph. Operations that should be undoable
- * call undoRedo.pushState() once before applying changes. moveNodes does not push
- * (caller pushes once at drag start). All operations read/write diagram and counters via state.
+ * Facade over graph editor actions. All mutating operations are delegated to
+ * {@link GraphEditorActionDispatcher}; return values and pre-checks (e.g. group delete
+ * confirmation) are handled here for API compatibility with the component and resize service.
  */
 @Injectable({ providedIn: 'root' })
 export class GraphOperationsService {
   constructor(
-    private state: GraphEditorStateService,
-    private undoRedo: GraphUndoRedoService,
-    private coordinate: GraphCoordinateService,
-    private linkGeometry: GraphLinkGeometryService
+    private readonly state: GraphEditorStateService,
+    private readonly dispatcher: GraphEditorActionDispatcher
   ) {}
 
-  /**
-   * Add a new node at the center of the current viewBox with default in/out ports.
-   * Pushes undo state before adding.
-   */
   addNode(): void {
-    const d = this.state.getDiagram();
-    if (!d) return;
-    this.undoRedo.pushState();
-
-    const nodeId = `n${this.state.incrementNodeIdCounter()}` as NodeId;
-    const vb = this.state.viewBox();
-    const centerX = vb.x + vb.width / 2 - 60;
-    const centerY = vb.y + vb.height / 2 - 30;
-    const { x, y } = this.state.snapToGridEnabled()
-      ? this.coordinate.snapToGrid(centerX, centerY)
-      : { x: centerX, y: centerY };
-
-    const node = new Node({
-      id: nodeId,
-      x,
-      y,
-      width: 120,
-      height: 60,
-      label: `Node ${this.state.getNodeIdCounter()}`,
-      ports: [],
-    });
-    node.addPort(
-      new Port({
-        id: `${nodeId}-in` as PortId,
-        nodeId,
-        side: 'left',
-        offset: 30,
-        type: 'input',
-      })
-    );
-    node.addPort(
-      new Port({
-        id: `${nodeId}-out` as PortId,
-        nodeId,
-        side: 'right',
-        offset: 30,
-        type: 'output',
-      })
-    );
-
-    d.addNode(node);
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new AddNodeAction());
   }
 
-  /**
-   * Add a new node from the palette at the given SVG coordinates (snapped to grid).
-   * Pushes undo state before adding.
-   */
   addNodeFromPalette(
     shape: NodeShape,
     svgX: number,
     svgY: number,
     customShapeId?: string
   ): void {
-    const d = this.state.getDiagram();
-    if (!d) return;
-    this.undoRedo.pushState();
-
-    const { x, y } = this.state.snapToGridEnabled()
-      ? this.coordinate.snapToGrid(svgX, svgY)
-      : { x: svgX, y: svgY };
-    const nodeId = `n${this.state.incrementNodeIdCounter()}` as NodeId;
-    const node = new Node({
-      id: nodeId,
-      x,
-      y,
-      width: 120,
-      height: 60,
-      label: `Node ${this.state.getNodeIdCounter()}`,
-      shape,
-      ...(shape === 'custom' && customShapeId != null && { customShapeId }),
-      ports: [],
-    });
-    node.addPort(
-      new Port({
-        id: `${nodeId}-in` as PortId,
-        nodeId,
-        side: 'left',
-        offset: 30,
-        type: 'input',
-      })
-    );
-    node.addPort(
-      new Port({
-        id: `${nodeId}-out` as PortId,
-        nodeId,
-        side: 'right',
-        offset: 30,
-        type: 'output',
-      })
-    );
-
-    d.addNode(node);
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new AddNodeFromPaletteAction(shape, svgX, svgY, customShapeId));
   }
 
-  /**
-   * Apply delta to nodes by id; used during drag. Does not push undo (caller does once at drag start).
-   */
   moveNodes(
     initialPositions: Map<NodeId, { x: number; y: number }>,
     dx: number,
     dy: number
   ): void {
-    const d = this.state.getDiagram();
-    if (!d) return;
-    for (const [nodeId, pos] of initialPositions) {
-      const n = d.getNode(nodeId);
-      if (n) {
-        const newX = pos.x + dx;
-        const newY = pos.y + dy;
-        const { x, y } = this.state.snapToGridEnabled()
-          ? this.coordinate.snapToGrid(newX, newY)
-          : { x: newX, y: newY };
-        n.setPosition(x, y);
-      }
-    }
-    this.state.incrementRenderTick();
+    this.dispatcher.dispatch(new MoveNodesAction(initialPositions, dx, dy));
   }
 
-  /**
-   * Rotate selected nodes by angleDeg degrees (clockwise). Pushes undo before applying.
-   */
   rotateSelectedNodes(angleDeg: number): void {
-    const d = this.state.getDiagram();
-    const nodeIds = this.state.selectedNodeIds();
-    if (!d || nodeIds.size === 0) return;
-    this.undoRedo.pushState();
-    for (const nodeId of nodeIds) {
-      const n = d.getNode(nodeId);
-      if (n) n.setRotation((n.rotation ?? 0) + angleDeg);
-    }
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new RotateNodesAction(angleDeg));
   }
 
-  /**
-   * Align or distribute selected nodes by the given mode. Requires ≥2 nodes for align, ≥3 for distribute.
-   * For align modes, the first selected node is the reference (unchanged); others align to it.
-   * Pushes undo before applying; uses snap-to-grid when enabled.
-   */
   alignSelectedNodes(mode: AlignMode): void {
-    const d = this.state.getDiagram();
-    const nodeIds = this.state.selectedNodeIds();
-    if (!d || nodeIds.size < 2) return;
-    if ((mode === 'distributeH' || mode === 'distributeV') && nodeIds.size < 3) return;
-
-    const orderedIds = Array.from(nodeIds);
-    const refId = orderedIds[0];
-    const ref = d.getNode(refId);
-    if (!ref) return;
-
-    const nodes: Node[] = [];
-    for (const id of nodeIds) {
-      const n = d.getNode(id);
-      if (n) nodes.push(n);
-    }
-    if (nodes.length < 2) return;
-    if ((mode === 'distributeH' || mode === 'distributeV') && nodes.length < 3) return;
-
-    const snap = (x: number, y: number) =>
-      this.state.snapToGridEnabled()
-        ? this.coordinate.snapToGrid(x, y)
-        : { x, y };
-
-    this.undoRedo.pushState();
-
-    const isAlignMode =
-      mode === 'alignLeft' ||
-      mode === 'alignCenterH' ||
-      mode === 'alignRight' ||
-      mode === 'alignTop' ||
-      mode === 'alignMiddleV' ||
-      mode === 'alignBottom';
-
-    if (isAlignMode) {
-      for (const n of nodes) {
-        if (n.id === refId) continue;
-        if (mode === 'alignLeft') {
-          const { x, y } = snap(ref.x, n.y);
-          n.setPosition(x, y);
-        } else if (mode === 'alignCenterH') {
-          const newX = ref.x + ref.width / 2 - n.width / 2;
-          const { x, y } = snap(newX, n.y);
-          n.setPosition(x, y);
-        } else if (mode === 'alignRight') {
-          const newX = ref.x + ref.width - n.width;
-          const { x, y } = snap(newX, n.y);
-          n.setPosition(x, y);
-        } else if (mode === 'alignTop') {
-          const { x, y } = snap(n.x, ref.y);
-          n.setPosition(x, y);
-        } else if (mode === 'alignMiddleV') {
-          const newY = ref.y + ref.height / 2 - n.height / 2;
-          const { x, y } = snap(n.x, newY);
-          n.setPosition(x, y);
-        } else if (mode === 'alignBottom') {
-          const newY = ref.y + ref.height - n.height;
-          const { x, y } = snap(n.x, newY);
-          n.setPosition(x, y);
-        }
-      }
-    } else {
-      let minX = Infinity;
-      let maxX = -Infinity;
-      let minY = Infinity;
-      let maxY = -Infinity;
-      for (const n of nodes) {
-        const left = n.x;
-        const right = n.x + n.width;
-        const top = n.y;
-        const bottom = n.y + n.height;
-        if (left < minX) minX = left;
-        if (right > maxX) maxX = right;
-        if (top < minY) minY = top;
-        if (bottom > maxY) maxY = bottom;
-      }
-      if (mode === 'distributeH') {
-        const sorted = [...nodes].sort((a, b) => a.x + a.width / 2 - (b.x + b.width / 2));
-        const totalWidth = sorted.reduce((sum, n) => sum + n.width, 0);
-        const bboxWidth = maxX - minX;
-        const gap = (bboxWidth - totalWidth) / (sorted.length - 1);
-        let x = minX;
-        for (const n of sorted) {
-          const { x: sx, y } = snap(x, n.y);
-          n.setPosition(sx, y);
-          x += n.width + gap;
-        }
-      } else if (mode === 'distributeV') {
-        const sorted = [...nodes].sort((a, b) => a.y + a.height / 2 - (b.y + b.height / 2));
-        const totalHeight = sorted.reduce((sum, n) => sum + n.height, 0);
-        const bboxHeight = maxY - minY;
-        const gap = (bboxHeight - totalHeight) / (sorted.length - 1);
-        let y = minY;
-        for (const n of sorted) {
-          const { x, y: sy } = snap(n.x, y);
-          n.setPosition(x, sy);
-          y += n.height + gap;
-        }
-      }
-    }
-
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new AlignNodesAction(mode));
   }
 
-  /**
-   * Create a link from source port to target port if valid (target is input, no duplicate).
-   * Pushes undo before adding.
-   */
   createLink(
     sourcePortId: PortId,
     _sourceNodeId: NodeId,
@@ -310,51 +82,24 @@ export class GraphOperationsService {
         (l) => l.sourcePortId === sourcePortId && l.targetPortId === targetPortId
       ) || d.links.some((l) => l.targetPortId === targetPortId);
     if (hasExisting) return false;
-
-    this.undoRedo.pushState();
-    const linkId = `l${this.state.incrementLinkIdCounter()}`;
-    d.addLink(
-      new Link({
-        id: linkId,
-        sourcePortId,
-        targetPortId,
-        routing: this.state.defaultLinkRouting(),
-      })
-    );
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new CreateLinkAction(sourcePortId, targetPortId, targetNodeId));
     return true;
   }
 
-  /**
-   * Set routing for all selected links. Pushes undo once at start.
-   * Used when user changes connector style in toolbar with links selected.
-   */
   setSelectedLinksRouting(routing: LinkRouting): boolean {
     const d = this.state.getDiagram();
     const linkIds = this.state.selectedLinkIds();
     if (!d || linkIds.size === 0) return false;
-    this.undoRedo.pushState();
-    for (const linkId of linkIds) {
-      const link = d.getLink(linkId);
-      if (link) link.routing = routing;
-    }
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new SetSelectedLinksRoutingAction(routing));
     return true;
   }
 
-  /**
-   * Delete all selected nodes and links. Pushes undo before deleting.
-   * Shows confirmation dialog if deleting a group node.
-   * Returns true if anything was removed.
-   */
   deleteSelection(): boolean {
     const d = this.state.getDiagram();
     if (!d) return false;
     const nodeIds = this.state.selectedNodeIds();
     const linkIds = this.state.selectedLinkIds();
     if (nodeIds.size === 0 && linkIds.size === 0) return false;
-
-    // Check if any selected nodes are groups
     let hasGroups = false;
     for (const nodeId of nodeIds) {
       const node = d.getNode(nodeId);
@@ -363,512 +108,84 @@ export class GraphOperationsService {
         break;
       }
     }
-
-    // Show confirmation dialog if deleting groups
-    if (hasGroups) {
-      const confirmed = window.confirm(
-        'Delete group and all its contents? This will remove the group and all nodes/links inside it.'
-      );
-      if (!confirmed) return false;
-    }
-
-    this.undoRedo.pushState();
-    let changed = false;
-    
-    // Delete group nodes and their children
-    for (const nodeId of nodeIds) {
-      const node = d.getNode(nodeId);
-      if (node instanceof GroupNode) {
-        // Delete all child nodes
-        for (const childNodeId of node.childNodeIds) {
-          d.removeNode(childNodeId);
-        }
-        // Delete all child links
-        for (const childLinkId of node.childLinkIds) {
-          d.removeLink(childLinkId);
-        }
-      }
-      if (d.removeNode(nodeId)) changed = true;
-    }
-    
-    for (const linkId of linkIds) {
-      if (d.removeLink(linkId)) changed = true;
-    }
-    
-    if (changed) {
-      this.state.clearSelection();
-      this.state.setDiagram(d, true);
-    }
-    return changed;
+    if (hasGroups && !DeleteSelectionAction.confirmGroupDelete()) return false;
+    this.dispatcher.dispatch(new DeleteSelectionAction());
+    return true;
   }
 
-  /**
-   * Copy selected nodes and their internal links to clipboard (DiagramJson).
-   */
   copy(): void {
-    const d = this.state.getDiagram();
-    const nodeIdSet = this.state.selectedNodeIds();
-    if (!d || nodeIdSet.size === 0) return;
-    const subsetDiagram = new Diagram();
-    for (const node of d.nodes) {
-      if (nodeIdSet.has(node.id)) subsetDiagram.addNode(node);
-    }
-    for (const link of d.links) {
-      const srcNode = d.nodes.find((n) => n.getPort(link.sourcePortId));
-      const tgtNode = d.nodes.find((n) => n.getPort(link.targetPortId));
-      if (
-        srcNode &&
-        tgtNode &&
-        nodeIdSet.has(srcNode.id) &&
-        nodeIdSet.has(tgtNode.id)
-      ) {
-        subsetDiagram.addLink(link);
-      }
-    }
-    this.state.setClipboard(serializeDiagram(subsetDiagram));
+    this.dispatcher.dispatch(new CopyAction());
   }
 
-  /**
-   * Paste from clipboard with offset and new ids; select pasted nodes. Pushes undo before paste.
-   */
   paste(): boolean {
     const clipboard = this.state.getClipboard();
     const d = this.state.getDiagram();
     if (!clipboard || !d) return false;
-
-    this.undoRedo.pushState();
-    const { json, newNodeIds } = cloneDiagramJsonForPaste(
-      clipboard,
-      PASTE_OFFSET,
-      PASTE_OFFSET,
-      this.state.getNodeIdCounter(),
-      this.state.getLinkIdCounter()
-    );
-    const pasted = deserializeDiagram(json);
-    for (const node of pasted.nodes) {
-      if (this.state.snapToGridEnabled()) {
-        const snapped = this.coordinate.snapToGrid(node.x, node.y);
-        node.setPosition(snapped.x, snapped.y);
-      }
-      d.addNode(node);
-      const m = /^n(\d+)$/.exec(node.id);
-      if (m)
-        this.state.setNodeIdCounter(
-          Math.max(this.state.getNodeIdCounter(), parseInt(m[1], 10))
-        );
-    }
-    for (const link of pasted.links) {
-      d.addLink(link);
-      const m = /^l(\d+)$/.exec(link.id);
-      if (m)
-        this.state.setLinkIdCounter(
-          Math.max(this.state.getLinkIdCounter(), parseInt(m[1], 10))
-        );
-    }
-    this.state.setNodeSelection(new Set(newNodeIds));
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new PasteAction());
     return true;
   }
 
-  /**
-   * Add a waypoint to a link at the given index. Pushes undo before adding.
-   * For orthogonal routing, the rendered path is kept H/V by Link.buildPath() (corner insertion),
-   * so we do not force-snap the waypoint to a single corner here (keeps editing responsive).
-   */
   addLinkWaypoint(linkId: LinkId, index: number, x: number, y: number): boolean {
     const d = this.state.getDiagram();
     const link = d?.getLink(linkId);
     if (!d || !link) return false;
-
-    this.undoRedo.pushState();
-
-    let px = x;
-    let py = y;
-    if (this.state.snapToGridEnabled()) {
-      const snapped = this.coordinate.snapToGrid(x, y);
-      px = snapped.x;
-      py = snapped.y;
-    }
-
-    const pt = new Point(px, py);
-    link.points.splice(index, 0, pt);
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new AddLinkWaypointAction(linkId, index, x, y));
     return true;
   }
 
-  /**
-   * Move an existing waypoint. Does not push undo (caller pushes at drag start).
-   */
   moveLinkWaypoint(linkId: LinkId, index: number, x: number, y: number): boolean {
     const d = this.state.getDiagram();
     const link = d?.getLink(linkId);
     if (!d || !link || index < 0 || index >= link.points.length) return false;
-
-    let px = x;
-    let py = y;
-    if (this.state.snapToGridEnabled()) {
-      const snapped = this.coordinate.snapToGrid(x, y);
-      px = snapped.x;
-      py = snapped.y;
-    }
-
-    link.points[index] = new Point(px, py);
-    this.state.incrementRenderTick();
+    this.dispatcher.dispatch(new MoveLinkWaypointAction(linkId, index, x, y));
     return true;
   }
 
-  /**
-   * Remove a waypoint from a link. Pushes undo before removing.
-   */
   removeLinkWaypoint(linkId: LinkId, index: number): boolean {
     const d = this.state.getDiagram();
     const link = d?.getLink(linkId);
     if (!d || !link || index < 0 || index >= link.points.length) return false;
-
-    this.undoRedo.pushState();
-    link.points.splice(index, 1);
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new RemoveLinkWaypointAction(linkId, index));
     return true;
   }
 
-  /**
-   * Move a segment by (dx, dy): segment 0 moves first waypoint; segment n moves last waypoint;
-   * segment i (1..n-1) moves both waypoints at segment ends. Does not push undo (caller pushes at drag start).
-   */
   moveLinkSegment(linkId: LinkId, segmentIndex: number, dx: number, dy: number): boolean {
     const d = this.state.getDiagram();
     const link = d?.getLink(linkId);
-    if (!d || !link) return false;
-    const n = link.points.length;
-    if (n === 0) return false;
-    if (segmentIndex === 0) {
-      link.points[0] = new Point(link.points[0].x + dx, link.points[0].y + dy);
-    } else if (segmentIndex >= n) {
-      link.points[n - 1] = new Point(link.points[n - 1].x + dx, link.points[n - 1].y + dy);
-    } else {
-      link.points[segmentIndex - 1] = new Point(
-        link.points[segmentIndex - 1].x + dx,
-        link.points[segmentIndex - 1].y + dy
-      );
-      link.points[segmentIndex] = new Point(
-        link.points[segmentIndex].x + dx,
-        link.points[segmentIndex].y + dy
-      );
-    }
-    this.state.incrementRenderTick();
+    if (!d || !link || link.points.length === 0) return false;
+    this.dispatcher.dispatch(new MoveLinkSegmentAction(linkId, segmentIndex, dx, dy));
     return true;
   }
 
-  /**
-   * Clear all waypoints from a link. Pushes undo before clearing.
-   */
   clearLinkWaypoints(linkId: LinkId): boolean {
     const d = this.state.getDiagram();
     const link = d?.getLink(linkId);
     if (!d || !link || link.points.length === 0) return false;
-
-    this.undoRedo.pushState();
-    link.points.length = 0;
-    this.state.setDiagram(d, true);
+    this.dispatcher.dispatch(new ClearLinkWaypointsAction(linkId));
     return true;
   }
 
-  /**
-   * Group selected nodes into a GroupNode container.
-   * Requirements: at least 2 regular nodes selected, no groups selected.
-   * Creates external ports for links crossing group boundary.
-   * Pushes undo before grouping.
-   */
   groupSelectedNodes(): boolean {
     const d = this.state.getDiagram();
     const selectedNodeIds = this.state.selectedNodeIds();
     if (!d || selectedNodeIds.size < 2) return false;
-
-    // Check that all selected nodes are regular nodes (not groups)
-    const selectedNodes: Node[] = [];
     for (const nodeId of selectedNodeIds) {
       const node = d.getNode(nodeId);
-      if (!node) return false;
-      if (node.nodeType === 'group') {
-        // Don't allow grouping of groups (nested groups not supported yet)
-        return false;
-      }
-      selectedNodes.push(node);
+      if (!node || node.nodeType === 'group') return false;
     }
-
-    this.undoRedo.pushState();
-
-    // Calculate bounding box of selected nodes
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    const originalPositions = new Map<NodeId, { x: number; y: number }>();
-    for (const node of selectedNodes) {
-      minX = Math.min(minX, node.x);
-      minY = Math.min(minY, node.y);
-      maxX = Math.max(maxX, node.x + node.width);
-      maxY = Math.max(maxY, node.y + node.height);
-      originalPositions.set(node.id, { x: node.x, y: node.y });
-    }
-
-    const padding = 30;
-    const groupX = minX - padding;
-    const groupY = minY - padding;
-    const groupWidth = maxX - minX + 2 * padding;
-    const groupHeight = maxY - minY + 2 * padding;
-
-    // Create group node
-    const groupId = `g${this.state.incrementNodeIdCounter()}` as NodeId;
-    const groupNode = new GroupNode({
-      id: groupId,
-      x: groupX,
-      y: groupY,
-      width: groupWidth,
-      height: groupHeight,
-      label: `Group ${this.state.getNodeIdCounter()}`,
-      childNodeIds: Array.from(selectedNodeIds),
-      childLinkIds: [],
-      originalPositions,
-      scale: 1,
-      ports: [],
-    });
-
-    // Find internal and external links
-    const childNodeIdSet = new Set(selectedNodeIds);
-    const internalLinkIds: LinkId[] = [];
-    const externalLinks: Array<{
-      link: Link;
-      isOutgoing: boolean;
-      childPortId: PortId;
-      externalPortId: PortId;
-    }> = [];
-
-    for (const link of d.links) {
-      const sourceNode = this.getNodeByPortId(d, link.sourcePortId);
-      const targetNode = this.getNodeByPortId(d, link.targetPortId);
-      
-      const sourceInGroup = sourceNode && childNodeIdSet.has(sourceNode.id);
-      const targetInGroup = targetNode && childNodeIdSet.has(targetNode.id);
-
-      if (sourceInGroup && targetInGroup) {
-        // Internal link
-        internalLinkIds.push(link.id);
-      } else if (sourceInGroup && !targetInGroup) {
-        // Outgoing link
-        externalLinks.push({
-          link,
-          isOutgoing: true,
-          childPortId: link.sourcePortId,
-          externalPortId: link.targetPortId,
-        });
-      } else if (!sourceInGroup && targetInGroup) {
-        // Incoming link
-        externalLinks.push({
-          link,
-          isOutgoing: false,
-          childPortId: link.targetPortId,
-          externalPortId: link.sourcePortId,
-        });
-      }
-    }
-
-    groupNode.childLinkIds = new Set(internalLinkIds);
-
-    // Store child nodes and links in the group for later restoration
-    for (const node of selectedNodes) {
-      groupNode.childNodes.set(node.id, node);
-    }
-    for (const linkId of internalLinkIds) {
-      const link = d.getLink(linkId);
-      if (link) {
-        groupNode.childLinks.set(linkId, link);
-      }
-    }
-
-    // Create external ports on the group and reconnect links
-    const portMap = new Map<PortId, PortId>(); // child port -> group port
-    let portCounter = 0;
-
-    for (const { link, isOutgoing, childPortId } of externalLinks) {
-      // Check if we already created a port for this child port
-      let groupPortId = portMap.get(childPortId);
-      
-      if (!groupPortId) {
-        // Create new external port on group
-        portCounter++;
-        groupPortId = `${groupId}-ext-${childPortId}` as PortId;
-        portMap.set(childPortId, groupPortId);
-
-        // Determine port side based on child node position relative to group
-        const childNode = this.getNodeByPortId(d, childPortId);
-        let side: PortSide = 'right';
-        let offset = groupHeight / 2;
-
-        if (childNode) {
-          const childCenterX = childNode.x + childNode.width / 2;
-          const childCenterY = childNode.y + childNode.height / 2;
-          const groupCenterX = groupX + groupWidth / 2;
-          const groupCenterY = groupY + groupHeight / 2;
-
-          // Determine which side of the group the port should be on
-          const dx = childCenterX - groupCenterX;
-          const dy = childCenterY - groupCenterY;
-
-          if (Math.abs(dx) > Math.abs(dy)) {
-            side = dx > 0 ? 'right' : 'left';
-            offset = childCenterY - groupY;
-          } else {
-            side = dy > 0 ? 'bottom' : 'top';
-            offset = childCenterX - groupX;
-          }
-        }
-
-        const port = new Port({
-          id: groupPortId,
-          nodeId: groupId,
-          side,
-          offset,
-          type: isOutgoing ? 'output' : 'input',
-        });
-        groupNode.addPort(port);
-      }
-
-      // Reconnect the link: remove old and add new with group port
-      d.removeLink(link.id);
-      const newLink = new Link({
-        id: link.id,
-        sourcePortId: isOutgoing ? groupPortId : link.sourcePortId,
-        targetPortId: isOutgoing ? link.targetPortId : groupPortId,
-        points: link.points.map((p) => ({ x: p.x, y: p.y })),
-        routing: link.routing,
-      });
-      d.addLink(newLink);
-    }
-
-    // Remove child nodes from diagram (they're now inside the group)
-    for (const nodeId of selectedNodeIds) {
-      d.removeNode(nodeId);
-    }
-
-    // Add group node to diagram
-    d.addNode(groupNode);
-
-    // Update scale for preview
-    groupNode.updateScale();
-
-    // Select the new group
-    this.state.clearSelection();
-    this.state.setNodeSelection(new Set([groupId]));
-    this.state.setDiagram(d, true);
-
+    this.dispatcher.dispatch(new GroupNodesAction());
     return true;
   }
 
-  /**
-   * Ungroup a GroupNode, restoring its child nodes and links.
-   * Reconnects external links back to original child ports.
-   * Pushes undo before ungrouping.
-   */
   ungroupNode(groupId: NodeId): boolean {
     const d = this.state.getDiagram();
     const groupNode = d?.getNode(groupId);
     if (!d || !groupNode || !(groupNode instanceof GroupNode)) return false;
-
-    this.undoRedo.pushState();
-
-    // Restore child nodes with their original positions
-    const restoredNodeIds: NodeId[] = [];
-    for (const childNodeId of groupNode.childNodeIds) {
-      const storedNode = groupNode.getChildNode(childNodeId);
-      const originalPos = groupNode.getOriginalPosition(childNodeId);
-      
-      if (storedNode && originalPos) {
-        // Restore the original node with its original position
-        storedNode.setPosition(originalPos.x, originalPos.y);
-        d.addNode(storedNode);
-        restoredNodeIds.push(childNodeId);
-      }
-    }
-
-    // Restore internal links
-    for (const childLinkId of groupNode.childLinkIds) {
-      const storedLink = groupNode.getChildLink(childLinkId);
-      if (storedLink) {
-        d.addLink(storedLink);
-      }
-    }
-
-    // Reconnect external links back to child ports
-    const portMap = new Map<PortId, PortId>(); // group port -> child port
-    for (const port of groupNode.ports) {
-      // Extract child port ID from group port ID (format: "g1-ext-n2-out")
-      const match = port.id.match(/-ext-(.+)$/);
-      if (match) {
-        portMap.set(port.id, match[1] as PortId);
-      }
-    }
-
-    // Reconnect external links: replace with new links pointing to child ports
-    const linksToUpdate = d.links.filter(
-      (l) => portMap.has(l.sourcePortId) || portMap.has(l.targetPortId)
-    );
-    for (const link of linksToUpdate) {
-      const childSourcePortId = portMap.get(link.sourcePortId);
-      const childTargetPortId = portMap.get(link.targetPortId);
-      if (!childSourcePortId && !childTargetPortId) continue;
-
-      d.removeLink(link.id);
-      const newLink = new Link({
-        id: link.id,
-        sourcePortId: childSourcePortId ?? link.sourcePortId,
-        targetPortId: childTargetPortId ?? link.targetPortId,
-        points: link.points.map((p) => ({ x: p.x, y: p.y })),
-        routing: link.routing,
-      });
-      d.addLink(newLink);
-    }
-
-    // Remove the group node
-    d.removeNode(groupId);
-
-    // Select the restored nodes
-    this.state.clearSelection();
-    this.state.setNodeSelection(new Set(restoredNodeIds));
-    this.state.setDiagram(d, true);
-
+    this.dispatcher.dispatch(new UngroupNodeAction(groupId));
     return true;
   }
 
-  /**
-   * Resize a group node to new dimensions.
-   * Updates scale factor for preview content.
-   * Does not push undo (caller should push once at resize start).
-   */
   resizeGroupNode(groupId: NodeId, newWidth: number, newHeight: number): void {
-    const d = this.state.getDiagram();
-    const groupNode = d?.getNode(groupId);
-    if (!d || !groupNode || !(groupNode instanceof GroupNode)) return;
-
-    // Update dimensions
-    groupNode.width = Math.max(newWidth, 100); // Minimum width
-    groupNode.height = Math.max(newHeight, 80); // Minimum height
-
-    // Recalculate scale for preview
-    groupNode.updateScale();
-
-    // Reposition ports proportionally
-    // (Ports stay at their relative positions on the edges)
-
-    this.state.incrementRenderTick();
-  }
-
-  /** Helper to find node by port ID. */
-  private getNodeByPortId(diagram: Diagram, portId: PortId): Node | undefined {
-    for (const node of diagram.nodes) {
-      if (node.getPort(portId)) return node;
-    }
-    return undefined;
+    this.dispatcher.dispatch(new ResizeGroupNodeAction(groupId, newWidth, newHeight));
   }
 }

@@ -1,6 +1,16 @@
 # Graph Canvas
 
-Angular 21 graph editor (Canvas + HTML hybrid). Generated with [Angular CLI](https://github.com/angular/angular-cli) version 21.1.2.
+Angular 21 graph editor (SVG + HTML hybrid) for node-link diagrams. Supports nodes, links, waypoints, groups, undo/redo, pan/zoom, and palette drag-and-drop.
+
+## Architecture
+
+The codebase is split into three layers:
+
+- **Domain** (`src/graph-core/`) — Framework-agnostic model: `Diagram`, `Node`, `GroupNode`, `Link`, `Port`, `Point`, and serialization. No Angular dependencies.
+- **Application** (`src/app/features/graph-editor/`) — State (signals), command/action layer, services (viewport, coordinate, link geometry, resize, undo/redo). Operations are implemented as actions dispatched via `GraphEditorActionDispatcher`; `GraphOperationsService` is a thin facade.
+- **UI** — Components (graph-editor, graph-node, graph-link, graph-toolbar, graph-palette, etc.) and the keyboard directive. They subscribe to state and invoke operations or actions.
+
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for a detailed architecture description and data flow.
 
 ## Development server
 

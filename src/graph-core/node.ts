@@ -2,18 +2,31 @@ import { Port } from './port';
 import type { NodeId, NodeShape, NodeType, PortId, PointLike } from './types';
 import type { Rect } from './types';
 
-/** Configuration for creating a Node. */
+/**
+ * Configuration for creating a Node.
+ */
 export interface NodeConfig {
+  /** Unique node identifier. */
   id: NodeId;
+  /** X position in diagram coordinates. */
   x: number;
+  /** Y position in diagram coordinates. */
   y: number;
+  /** Width; defaults to 120. */
   width?: number;
+  /** Height; defaults to 60. */
   height?: number;
+  /** Display label. */
   label?: string;
+  /** Geometric shape for rendering. */
   shape?: NodeShape;
+  /** Rotation in degrees (clockwise). */
   rotation?: number;
+  /** Regular or group node. */
   nodeType?: NodeType;
+  /** Custom shape identifier when shape is 'custom'. */
   customShapeId?: string;
+  /** Initial ports (input/output). */
   ports?: Port[];
 }
 
@@ -49,7 +62,10 @@ export class Node implements NodeConfig {
     }
   }
 
-  /** Bounding rectangle (x, y, width, height) for layout and port position. */
+  /**
+   * Bounding rectangle for layout and port position.
+   * @returns Rect with x, y, width, height
+   */
   getRect(): Rect {
     return { x: this.x, y: this.y, width: this.width, height: this.height };
   }
@@ -59,34 +75,55 @@ export class Node implements NodeConfig {
     return Array.from(this._ports.values());
   }
 
-  /** Add a port (e.g. input or output). */
+  /**
+   * Add a port (e.g. input or output).
+   * @param port - Port to add; replaces existing port with same id
+   */
   addPort(port: Port): void {
     this._ports.set(port.id, port);
   }
 
-  /** Remove port by id. Returns true if removed. */
+  /**
+   * Remove port by id.
+   * @param id - Port id to remove
+   * @returns true if the port existed and was removed
+   */
   removePort(id: PortId): boolean {
     return this._ports.delete(id);
   }
 
-  /** Get port by id. */
+  /**
+   * Get port by id.
+   * @param id - Port id
+   * @returns Port or undefined
+   */
   getPort(id: PortId): Port | undefined {
     return this._ports.get(id);
   }
 
-  /** Set node position (in-place). */
+  /**
+   * Set node position (in-place).
+   * @param x - New x
+   * @param y - New y
+   */
   setPosition(x: number, y: number): void {
     this.x = x;
     this.y = y;
   }
 
-  /** Set position from a point-like object. */
+  /**
+   * Set position from a point-like object.
+   * @param p - Point or { x, y }
+   */
   setPositionFromPoint(p: PointLike): void {
     this.x = p.x;
     this.y = p.y;
   }
 
-  /** Set node rotation in degrees (clockwise). In-place. */
+  /**
+   * Set node rotation in degrees (clockwise). In-place.
+   * @param deg - Rotation in degrees
+   */
   setRotation(deg: number): void {
     this.rotation = deg;
   }
