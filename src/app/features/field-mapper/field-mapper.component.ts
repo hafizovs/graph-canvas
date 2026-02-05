@@ -14,6 +14,7 @@ import type { TreeNode, Mapping, ColumnFilter, ExpandedIds, AnchorPoint } from '
 import { mappingKey } from './models/field-mapper.model';
 import { TreeTableComponent } from './tree-table/tree-table.component';
 import { MapperLinksOverlayComponent } from './mapper-links-overlay/mapper-links-overlay.component';
+import { FieldMapperUndoRedoService } from './services/field-mapper-undo-redo.service';
 
 @Component({
   selector: 'app-field-mapper',
@@ -21,10 +22,13 @@ import { MapperLinksOverlayComponent } from './mapper-links-overlay/mapper-links
   changeDetection: ChangeDetectionStrategy.OnPush,
   schemas: [NO_ERRORS_SCHEMA],
   imports: [TreeTableComponent, MapperLinksOverlayComponent],
+  providers: [FieldMapperUndoRedoService],
   templateUrl: './field-mapper.component.html',
   styleUrl: './field-mapper.component.scss',
 })
 export class FieldMapperComponent {
+  private readonly undoRedo = inject(FieldMapperUndoRedoService);
+
   readonly leftTreeRef = viewChild<TreeTableComponent>('leftTree');
   readonly rightTreeRef = viewChild<TreeTableComponent>('rightTree');
   readonly overlayContainerRef = viewChild<ElementRef<HTMLElement>>('overlayContainer');
@@ -135,6 +139,7 @@ export class FieldMapperComponent {
     const source = this.dragSource();
     const targetLeafId = this.dropTargetLeafId();
     if (source && targetLeafId) {
+      this.undoRedo.pushState(this.mappings());
       this.mappings.update((list) => [...list, { sourceLeafId: source, targetLeafId }]);
     }
     this.dragSource.set(null);
@@ -186,10 +191,35 @@ export class FieldMapperComponent {
   }
 
   onKeydown(event: KeyboardEvent): void {
+    const isUndo = (event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey;
+    const isRedo =
+      (event.ctrlKey || event.metaKey) &&
+      (event.key === 'y' || (event.key === 'z' && event.shiftKey));
+    if (isUndo) {
+      event.preventDefault();
+      event.stopPropagation();
+      const snapshot = this.undoRedo.undo(this.mappings());
+      if (snapshot !== null) {
+        this.mappings.set(snapshot);
+        this.selectedMappingKey.set(null);
+      }
+      return;
+    }
+    if (isRedo) {
+      event.preventDefault();
+      event.stopPropagation();
+      const snapshot = this.undoRedo.redo(this.mappings());
+      if (snapshot !== null) {
+        this.mappings.set(snapshot);
+        this.selectedMappingKey.set(null);
+      }
+      return;
+    }
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const key = this.selectedMappingKey();
       if (!key) return;
       event.preventDefault();
+      this.undoRedo.pushState(this.mappings());
       const [sourceLeafId, targetLeafId] = key.split('\0');
       this.mappings.update((list) =>
         list.filter(
