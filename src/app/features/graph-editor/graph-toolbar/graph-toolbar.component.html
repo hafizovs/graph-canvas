@@ -366,6 +366,11 @@
     Diamond
   </button>
   }
+  @if (show('fieldMapperDemo')) {
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onFieldMapperDemo()" title="Field mapper demo: two trees, DnD, Bezier links">
+    Field mapper demo
+  </button>
+  }
   @if (show('saveLoad')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onSave()" title="Save to file and storage">

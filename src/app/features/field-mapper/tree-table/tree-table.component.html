@@ -1,0 +1,64 @@
+<div class="tree-table">
+  <div class="tree-table-header">
+    <div class="header-cell header-cell-expand" [class.header-cell-expand-empty]="root().isLeaf"></div>
+    <div class="header-cell header-cell-label">{{ root().label }}</div>
+    @for (col of columnHeaders(); track $index) {
+      <div class="header-cell header-cell-filter">
+        <input
+          type="text"
+          class="filter-input"
+          [value]="col.filterValue"
+          (input)="onFilterChange($index, $any($event.target).value)"
+          placeholder="Filter"
+        />
+      </div>
+    }
+  </div>
+  <div class="tree-table-body">
+    @for (row of visibleRows(); track trackByNodeId($index, row); let i = $index) {
+      @if (row.isLeaf) {
+        <div
+          #rowRef
+          class="tree-row tree-row-leaf"
+          [style.padding-left.rem]="0.5 + row.depth * 1.2"
+          [attr.data-leaf-id]="row.node.id"
+          [class.draggable]="side() === 'left'"
+          [class.droppable]="side() === 'right'"
+          [class.drop-target]="side() === 'right' && dropTargetLeafId() === row.node.id"
+          (pointerdown)="side() === 'left' && onDragStart(row.node.id, $event)"
+        >
+          <div class="leaf-cell leaf-cell-placeholder"></div>
+          <div class="leaf-cell leaf-cell-label">{{ row.node.label }}</div>
+          @for (col of (row.node.columns ?? ['', '', '', '']); track $index) {
+            <div class="leaf-cell">{{ col }}</div>
+          }
+        </div>
+      } @else {
+        <div
+          #rowRef
+          class="tree-row tree-row-parent"
+          [style.padding-left.rem]="0.5 + row.depth * 1.2"
+          [attr.data-node-id]="row.node.id"
+        >
+          <button
+            type="button"
+            class="expand-btn"
+            (click)="onToggleExpand(row.node.id)"
+            [attr.aria-expanded]="expandedIds().has(row.node.id)"
+          >
+            @if (expandedIds().has(row.node.id)) {
+              <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg:path d="M18 15l-6-6-6 6" />
+              </svg>
+            } @else {
+              <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <svg:path d="M9 18l6-6-6-6" />
+              </svg>
+            }
+          </button>
+          <div class="parent-cell-label">{{ row.node.label }}</div>
+        </div>
+      }
+    }
+  </div>
+</div>

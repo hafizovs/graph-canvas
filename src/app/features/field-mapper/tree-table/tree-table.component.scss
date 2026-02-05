@@ -1,0 +1,129 @@
+.tree-table {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-width: 200px;
+  background: var(--mapper-panel-bg, #f8f9fa);
+  border: 1px solid var(--mapper-panel-border, #dee2e6);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.tree-table-header {
+  display: grid;
+  grid-template-columns: 28px 1fr repeat(4, minmax(60px, 1fr));
+  gap: 4px;
+  padding: 8px;
+  background: var(--mapper-header-bg, #e9ecef);
+  border-bottom: 1px solid var(--mapper-panel-border, #dee2e6);
+  flex-shrink: 0;
+}
+
+.header-cell-expand-empty {
+  visibility: hidden;
+}
+
+.header-cell-expand {
+  grid-column: 1;
+}
+
+.header-cell-label {
+  font-weight: 600;
+  color: var(--mapper-header-fg, #212529);
+}
+
+.header-cell-filter {
+  min-width: 0;
+}
+
+.filter-input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid var(--mapper-input-border, #ced4da);
+  border-radius: 4px;
+  background: #fff;
+
+  &::placeholder {
+    color: #6c757d;
+  }
+}
+
+.tree-table-body {
+  flex: 1;
+  overflow: auto;
+}
+
+.tree-row {
+  display: grid;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--mapper-row-border, #eee);
+  font-size: 13px;
+}
+
+.tree-row-leaf {
+  grid-template-columns: 28px 1fr repeat(4, minmax(60px, 1fr));
+  gap: 4px;
+}
+
+.tree-row-leaf.draggable {
+  cursor: grab;
+  user-select: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+.tree-row-leaf.droppable.drop-target {
+  background: var(--mapper-drop-target-bg, rgba(100, 150, 255, 0.15));
+  outline: 2px solid var(--mapper-drop-target-outline, #48f);
+}
+
+.leaf-cell-placeholder {
+  grid-column: 1;
+}
+
+.leaf-cell-label {
+  font-weight: 500;
+}
+
+.leaf-cell {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tree-row-parent {
+  grid-template-columns: 28px 1fr;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.expand-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--mapper-icon-fg, #495057);
+
+  &:hover {
+    background: var(--mapper-btn-hover, rgba(0, 0, 0, 0.06));
+  }
+}
+
+.parent-cell-label {
+  grid-column: 2 / -1;
+}
+
+.icon {
+  flex-shrink: 0;
+}

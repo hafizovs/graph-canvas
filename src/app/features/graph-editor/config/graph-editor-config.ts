@@ -23,6 +23,7 @@ export interface GraphEditorToolbarConfig {
   snapToGrid?: boolean;
   examples?: boolean;
   saveLoad?: boolean;
+  fieldMapperDemo?: boolean;
 }
 
 /** Palette feature flags. */
@@ -93,6 +94,7 @@ const DEFAULT_TOOLBAR: Required<GraphEditorToolbarConfig> = {
   snapToGrid: true,
   examples: true,
   saveLoad: true,
+  fieldMapperDemo: true,
 };
 
 const DEFAULT_PALETTE: Required<GraphEditorPaletteConfig> = {

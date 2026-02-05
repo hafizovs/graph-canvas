@@ -10,6 +10,7 @@ import {
   signal,
   effect,
   computed,
+  viewChild,
 } from '@angular/core';
 import type { DiagramJson } from '../../../graph-core';
 import { MOCK_DIAGRAM_CHAIN, MOCK_DIAGRAM_EMPTY, GroupNode } from '../../../graph-core';
@@ -52,6 +53,12 @@ import type {
 import type { GraphEditorConfig } from './config/graph-editor-config';
 import { GRAPH_EDITOR_CONFIG, mergeWithDefaults } from './config/graph-editor-config';
 import { GraphEditorActionDispatcher } from './actions/action-dispatcher.service';
+import { FieldMapperComponent } from '../field-mapper/field-mapper.component';
+import {
+  DEMO_SOURCES_TREE,
+  DEMO_RECEIVERS_TREE,
+  DEMO_MAPPINGS,
+} from '../field-mapper/demo-data';
 
 /**
  * Main graph editor container. Renders the diagram (nodes, links, grid), coordinates state,
@@ -74,6 +81,7 @@ import { GraphEditorActionDispatcher } from './actions/action-dispatcher.service
     GraphPaletteComponent,
     GraphToolbarComponent,
     GraphEditorKeyboardDirective,
+    FieldMapperComponent,
   ],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
@@ -172,6 +180,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** True when node context menu is from a group (no Rotate). */
   protected readonly nodeContextMenuIsGroup = signal<boolean>(false);
+
+  /** When true, the field mapper demo modal is open. */
+  protected readonly fieldMapperDemoOpen = signal(false);
+  private fieldMapperDemoDataLoaded = false;
+  private readonly fieldMapperRef = viewChild(FieldMapperComponent);
 
   /** True when all selected nodes and links are locked (for Lock/Unlock button label). */
   protected readonly hasLockedSelection = computed(() => {
@@ -283,6 +296,26 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const cfg = this.effectiveConfig();
       this.state.setSnapToGridEnabled(cfg.snapToGrid ?? this.snapToGrid());
     });
+    effect(() => {
+      const open = this.fieldMapperDemoOpen();
+      if (!open) {
+        this.fieldMapperDemoDataLoaded = false;
+        return;
+      }
+      const mapper = this.fieldMapperRef();
+      if (mapper && !this.fieldMapperDemoDataLoaded) {
+        this.fieldMapperDemoDataLoaded = true;
+        mapper.setData(DEMO_SOURCES_TREE, DEMO_RECEIVERS_TREE, DEMO_MAPPINGS);
+      }
+    });
+  }
+
+  protected onFieldMapperDemo(): void {
+    this.fieldMapperDemoOpen.set(true);
+  }
+
+  protected closeFieldMapperDemo(): void {
+    this.fieldMapperDemoOpen.set(false);
   }
 
   private interactionEnabled(key: keyof NonNullable<GraphEditorConfig['interactions']>): boolean {

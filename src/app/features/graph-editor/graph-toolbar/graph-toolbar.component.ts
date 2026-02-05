@@ -65,6 +65,7 @@ export class GraphToolbarComponent {
   readonly bringToFront = output<void>();
   readonly sendToBack = output<void>();
   readonly lockUnlock = output<void>();
+  readonly fieldMapperDemoClick = output<void>();
 
   protected show(key: keyof GraphEditorToolbarConfig): boolean {
     return this.toolbarConfig()?.[key] !== false;
@@ -163,6 +164,10 @@ export class GraphToolbarComponent {
 
   protected onLockUnlock(): void {
     this.lockUnlock.emit();
+  }
+
+  protected onFieldMapperDemo(): void {
+    this.fieldMapperDemoClick.emit();
   }
 
   /** Trigger file input click. */

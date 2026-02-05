@@ -1,0 +1,19 @@
+:host {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mapper-links-overlay {
+  width: 100%;
+  height: 100%;
+}
+
+.mapper-link-path {
+  pointer-events: none;
+}
+
+.mapper-preview-path {
+  pointer-events: none;
+}

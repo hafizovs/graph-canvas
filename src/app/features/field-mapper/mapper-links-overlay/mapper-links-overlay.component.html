@@ -1,0 +1,51 @@
+<svg
+  class="mapper-links-overlay"
+  [attr.viewBox]="'0 0 ' + width() + ' ' + height()"
+  preserveAspectRatio="none"
+>
+  <svg:defs>
+    <svg:marker
+      id="mapper-arrow"
+      markerWidth="10"
+      markerHeight="8"
+      refX="9"
+      refY="4"
+      orient="auto"
+    >
+      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-link-stroke, #555)" />
+    </svg:marker>
+    <svg:marker
+      id="mapper-arrow-preview"
+      markerWidth="10"
+      markerHeight="8"
+      refX="9"
+      refY="4"
+      orient="auto"
+    >
+      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-preview-stroke, #95a)" />
+    </svg:marker>
+  </svg:defs>
+  @for (pathD of pathDataList(); track $index) {
+    <svg:path
+      class="mapper-link-path"
+      [attr.d]="pathD"
+      fill="none"
+      stroke="var(--mapper-link-stroke, #555)"
+      stroke-width="2"
+      vector-effect="non-scaling-stroke"
+      marker-end="url(#mapper-arrow)"
+    />
+  }
+  @if (previewPathD()) {
+    <svg:path
+      class="mapper-preview-path"
+      [attr.d]="previewPathD()"
+      fill="none"
+      stroke="var(--mapper-preview-stroke, #95a)"
+      stroke-width="2"
+      stroke-dasharray="6 4"
+      vector-effect="non-scaling-stroke"
+      marker-end="url(#mapper-arrow-preview)"
+    />
+  }
+</svg>

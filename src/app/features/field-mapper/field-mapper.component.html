@@ -1,0 +1,41 @@
+<div class="field-mapper">
+  <div class="field-mapper-panel field-mapper-sources" data-side="left">
+    @if (sourcesRoot(); as root) {
+      <app-tree-table
+        #leftTree
+        [root]="root"
+        [expandedIds]="sourcesExpanded()"
+        [filters]="sourcesFilters()"
+        side="left"
+        [dropTargetLeafId]="null"
+        (dragStart)="onSourcesDragStart($event)"
+        (filterChange)="onSourcesFilterChange($event)"
+        (toggleExpand)="onSourcesToggleExpand($event)"
+      />
+    }
+  </div>
+  <div #overlayContainer class="field-mapper-center">
+    <app-mapper-links-overlay
+      [mappings]="mappings()"
+      [anchorByLeafId]="anchorByLeafId()"
+      [previewFrom]="previewFrom()"
+      [previewTo]="previewPoint()"
+      [width]="overlaySize().width"
+      [height]="overlaySize().height"
+    />
+  </div>
+  <div class="field-mapper-panel field-mapper-receivers" data-side="right">
+    @if (receiversRoot(); as root) {
+      <app-tree-table
+        #rightTree
+        [root]="root"
+        [expandedIds]="receiversExpanded()"
+        [filters]="receiversFilters()"
+        side="right"
+        [dropTargetLeafId]="dropTargetLeafId()"
+        (filterChange)="onReceiversFilterChange($event)"
+        (toggleExpand)="onReceiversToggleExpand($event)"
+      />
+    }
+  </div>
+</div>
