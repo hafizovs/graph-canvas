@@ -20,6 +20,11 @@ export interface Mapping {
   targetLeafId: string;
 }
 
+/** Stable key for a mapping (for selection / lookup). */
+export function mappingKey(m: Mapping): string {
+  return `${m.sourceLeafId}\0${m.targetLeafId}`;
+}
+
 /** Filter state per column (e.g. search string). */
 export interface ColumnFilter {
   value: string;

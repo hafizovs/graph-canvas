@@ -11,6 +11,7 @@ import {
   NO_ERRORS_SCHEMA,
 } from '@angular/core';
 import type { TreeNode, Mapping, ColumnFilter, ExpandedIds, AnchorPoint } from './models/field-mapper.model';
+import { mappingKey } from './models/field-mapper.model';
 import { TreeTableComponent } from './tree-table/tree-table.component';
 import { MapperLinksOverlayComponent } from './mapper-links-overlay/mapper-links-overlay.component';
 
@@ -54,6 +55,9 @@ export class FieldMapperComponent {
   readonly anchorByLeafId = signal<Map<string, AnchorPoint>>(new Map());
   readonly overlaySize = signal({ width: 1, height: 1 });
 
+  /** Selected link (mapping) key for highlight and Delete. */
+  readonly selectedMappingKey = signal<string | null>(null);
+
   private dragPointerId: number | null = null;
   private boundMove = (e: PointerEvent) => this.onDragMove(e);
   private boundUp = (e: PointerEvent) => this.onDragUp(e);
@@ -61,6 +65,7 @@ export class FieldMapperComponent {
   constructor() {
     afterNextRender(() => {
       this.updateAnchorMap();
+      this.overlayContainerRef()?.nativeElement?.focus();
     });
     effect(() => {
       this.sourcesExpanded();
@@ -170,6 +175,29 @@ export class FieldMapperComponent {
       else next.add(nodeId);
       return next;
     });
+  }
+
+  onMappingClick(payload: { sourceLeafId: string; targetLeafId: string }): void {
+    this.selectedMappingKey.set(mappingKey(payload));
+  }
+
+  onCenterClick(): void {
+    this.selectedMappingKey.set(null);
+  }
+
+  onKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Delete' || event.key === 'Backspace') {
+      const key = this.selectedMappingKey();
+      if (!key) return;
+      event.preventDefault();
+      const [sourceLeafId, targetLeafId] = key.split('\0');
+      this.mappings.update((list) =>
+        list.filter(
+          (m) => !(m.sourceLeafId === sourceLeafId && m.targetLeafId === targetLeafId)
+        )
+      );
+      this.selectedMappingKey.set(null);
+    }
   }
 
   private updateAnchorMap(): void {

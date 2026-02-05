@@ -53,12 +53,10 @@ import type {
 import type { GraphEditorConfig } from './config/graph-editor-config';
 import { GRAPH_EDITOR_CONFIG, mergeWithDefaults } from './config/graph-editor-config';
 import { GraphEditorActionDispatcher } from './actions/action-dispatcher.service';
-import { FieldMapperComponent } from '../field-mapper/field-mapper.component';
-import {
-  DEMO_SOURCES_TREE,
-  DEMO_RECEIVERS_TREE,
-  DEMO_MAPPINGS,
-} from '../field-mapper/demo-data';
+import type { Type } from '@angular/core';
+import { Injector } from '@angular/core';
+import { NgComponentOutlet } from '@angular/common';
+import { FIELD_MAPPER_DEMO_CLOSE } from '../field-mapper/field-mapper-demo-modal/field-mapper-demo-modal.tokens';
 
 /**
  * Main graph editor container. Renders the diagram (nodes, links, grid), coordinates state,
@@ -81,7 +79,7 @@ import {
     GraphPaletteComponent,
     GraphToolbarComponent,
     GraphEditorKeyboardDirective,
-    FieldMapperComponent,
+    NgComponentOutlet,
   ],
   templateUrl: './graph-editor.component.html',
   styleUrl: './graph-editor.component.scss',
@@ -183,8 +181,20 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** When true, the field mapper demo modal is open. */
   protected readonly fieldMapperDemoOpen = signal(false);
-  private fieldMapperDemoDataLoaded = false;
-  private readonly fieldMapperRef = viewChild(FieldMapperComponent);
+  /** Lazy-loaded modal component type (loaded on first open). */
+  protected readonly fieldMapperDemoComponent = signal<Type<unknown> | null>(null);
+  private readonly injector = inject(Injector);
+  protected readonly fieldMapperDemoInjector = computed(() =>
+    Injector.create({
+      providers: [
+        {
+          provide: FIELD_MAPPER_DEMO_CLOSE,
+          useValue: () => this.closeFieldMapperDemo(),
+        },
+      ],
+      parent: this.injector,
+    })
+  );
 
   /** True when all selected nodes and links are locked (for Lock/Unlock button label). */
   protected readonly hasLockedSelection = computed(() => {
@@ -296,22 +306,20 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const cfg = this.effectiveConfig();
       this.state.setSnapToGridEnabled(cfg.snapToGrid ?? this.snapToGrid());
     });
-    effect(() => {
-      const open = this.fieldMapperDemoOpen();
-      if (!open) {
-        this.fieldMapperDemoDataLoaded = false;
-        return;
-      }
-      const mapper = this.fieldMapperRef();
-      if (mapper && !this.fieldMapperDemoDataLoaded) {
-        this.fieldMapperDemoDataLoaded = true;
-        mapper.setData(DEMO_SOURCES_TREE, DEMO_RECEIVERS_TREE, DEMO_MAPPINGS);
-      }
-    });
   }
 
   protected onFieldMapperDemo(): void {
-    this.fieldMapperDemoOpen.set(true);
+    const comp = this.fieldMapperDemoComponent();
+    if (comp) {
+      this.fieldMapperDemoOpen.set(true);
+      return;
+    }
+    import(
+      '../field-mapper/field-mapper-demo-modal/field-mapper-demo-modal.component'
+    ).then((m) => {
+      this.fieldMapperDemoComponent.set(m.FieldMapperDemoModalComponent);
+      this.fieldMapperDemoOpen.set(true);
+    });
   }
 
   protected closeFieldMapperDemo(): void {

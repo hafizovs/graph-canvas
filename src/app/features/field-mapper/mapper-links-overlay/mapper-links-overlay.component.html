@@ -12,7 +12,17 @@
       refY="4"
       orient="auto"
     >
-      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-link-stroke, #555)" />
+      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-link-stroke)" />
+    </svg:marker>
+    <svg:marker
+      id="mapper-arrow-selected"
+      markerWidth="10"
+      markerHeight="8"
+      refX="9"
+      refY="4"
+      orient="auto"
+    >
+      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-link-selected-stroke)" />
     </svg:marker>
     <svg:marker
       id="mapper-arrow-preview"
@@ -22,18 +32,29 @@
       refY="4"
       orient="auto"
     >
-      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-preview-stroke, #95a)" />
+      <svg:path d="M0 0 L10 4 L0 8 Z" fill="var(--mapper-preview-stroke)" />
     </svg:marker>
   </svg:defs>
-  @for (pathD of pathDataList(); track $index) {
+  @for (item of pathItems(); track getMappingKey(item.mapping)) {
+    <svg:path
+      class="mapper-link-hit"
+      [attr.d]="item.pathD"
+      fill="none"
+      stroke="transparent"
+      stroke-width="20"
+      vector-effect="non-scaling-stroke"
+      (click)="onPathClick(item.mapping, $event)"
+    />
     <svg:path
       class="mapper-link-path"
-      [attr.d]="pathD"
+      [class.mapper-link-path-selected]="isSelected(item.mapping)"
+      [attr.d]="item.pathD"
+      [attr.marker-end]="isSelected(item.mapping) ? 'url(#mapper-arrow-selected)' : 'url(#mapper-arrow)'"
       fill="none"
-      stroke="var(--mapper-link-stroke, #555)"
+      stroke="var(--mapper-link-stroke)"
       stroke-width="2"
       vector-effect="non-scaling-stroke"
-      marker-end="url(#mapper-arrow)"
+      pointer-events="none"
     />
   }
   @if (previewPathD()) {
@@ -41,7 +62,7 @@
       class="mapper-preview-path"
       [attr.d]="previewPathD()"
       fill="none"
-      stroke="var(--mapper-preview-stroke, #95a)"
+      stroke="var(--mapper-preview-stroke)"
       stroke-width="2"
       stroke-dasharray="6 4"
       vector-effect="non-scaling-stroke"

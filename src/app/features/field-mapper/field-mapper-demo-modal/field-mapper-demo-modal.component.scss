@@ -1,0 +1,76 @@
+:host {
+  --mapper-modal-bg: #fff;
+  --mapper-modal-backdrop: rgba(15, 23, 42, 0.4);
+  --mapper-panel-border: #e2e8f0;
+  --mapper-header-bg: #f8fafc;
+}
+
+.field-mapper-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--mapper-modal-backdrop);
+  cursor: pointer;
+}
+
+.field-mapper-modal {
+  position: fixed;
+  z-index: 101;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  width: 90vw;
+  max-width: 1000px;
+  height: 80vh;
+  max-height: 600px;
+  background: var(--mapper-modal-bg);
+  border-radius: 12px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  border: 1px solid var(--mapper-panel-border);
+}
+
+.field-mapper-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--mapper-panel-border);
+  background: var(--mapper-header-bg);
+}
+
+.field-mapper-modal-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.field-mapper-modal-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 6px;
+  color: #64748b;
+  transition: background 0.12s ease, color 0.12s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #0f172a;
+  }
+}
+
+.field-mapper-modal-body {
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+  background: #f8fafc;
+}

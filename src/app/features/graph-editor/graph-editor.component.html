@@ -284,17 +284,13 @@
     }
   </div>
 
-  @if (fieldMapperDemoOpen()) {
-    <div class="field-mapper-modal-backdrop" (click)="closeFieldMapperDemo()" role="button" tabindex="0" (keydown.escape)="closeFieldMapperDemo()"></div>
-    <div class="field-mapper-modal" role="dialog" aria-modal="true" aria-label="Field mapper demo">
-      <div class="field-mapper-modal-header">
-        <h2 class="field-mapper-modal-title">Field mapper demo</h2>
-        <button type="button" class="field-mapper-modal-close" (click)="closeFieldMapperDemo()" title="Close">×</button>
-      </div>
-      <div class="field-mapper-modal-body">
-        <app-field-mapper />
-      </div>
-    </div>
+  @if (fieldMapperDemoOpen() && fieldMapperDemoComponent()) {
+    <ng-container
+      *ngComponentOutlet="
+        fieldMapperDemoComponent();
+        injector: fieldMapperDemoInjector()
+      "
+    ></ng-container>
   }
 </div>
 </div>

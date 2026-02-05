@@ -1,11 +1,33 @@
+:host {
+  --mapper-bg: #f1f5f9;
+  --mapper-panel-bg: #fff;
+  --mapper-panel-border: #e2e8f0;
+  --mapper-panel-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --mapper-header-bg: #f8fafc;
+  --mapper-header-fg: #0f172a;
+  --mapper-link-stroke: #64748b;
+  --mapper-link-selected-stroke: #3b82f6;
+  --mapper-preview-stroke: #6366f1;
+  --mapper-drop-target-bg: rgba(59, 130, 246, 0.12);
+  --mapper-drop-target-outline: #3b82f6;
+  --mapper-row-border: #f1f5f9;
+  --mapper-row-hover-bg: rgba(0, 0, 0, 0.02);
+  --mapper-link-hover-stroke: #475569;
+  --mapper-input-border: #cbd5e1;
+  --mapper-btn-hover: rgba(0, 0, 0, 0.05);
+  --mapper-icon-fg: #475569;
+}
+
 .field-mapper {
   display: grid;
   grid-template-columns: 1fr minmax(120px, 0.5fr) 1fr;
-  gap: 0;
+  gap: 12px;
   width: 100%;
   height: 100%;
   min-height: 400px;
-  background: var(--mapper-bg, #f1f3f5);
+  padding: 8px;
+  background: var(--mapper-bg);
+  align-items: stretch;
 }
 
 .field-mapper-panel {
@@ -13,10 +35,16 @@
   flex-direction: column;
   min-width: 0;
   overflow: hidden;
+  border-radius: 10px;
+  box-shadow: var(--mapper-panel-shadow);
+  border: 1px solid var(--mapper-panel-border);
+  background: var(--mapper-panel-bg);
 }
 
 .field-mapper-center {
   position: relative;
   min-width: 0;
-  background: transparent;
+  border-radius: 10px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.6) 0%, rgba(241, 245, 249, 0.4) 100%);
+  outline: none;
 }

@@ -14,7 +14,13 @@
       />
     }
   </div>
-  <div #overlayContainer class="field-mapper-center">
+  <div
+    #overlayContainer
+    class="field-mapper-center"
+    tabindex="0"
+    (click)="onCenterClick()"
+    (keydown)="onKeydown($event)"
+  >
     <app-mapper-links-overlay
       [mappings]="mappings()"
       [anchorByLeafId]="anchorByLeafId()"
@@ -22,6 +28,8 @@
       [previewTo]="previewPoint()"
       [width]="overlaySize().width"
       [height]="overlaySize().height"
+      [selectedMappingKey]="selectedMappingKey()"
+      (mappingClick)="onMappingClick($event)"
     />
   </div>
   <div class="field-mapper-panel field-mapper-receivers" data-side="right">
