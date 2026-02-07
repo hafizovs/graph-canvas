@@ -18,3 +18,7 @@ export {
   MOCK_DIAGRAM_CHAIN,
   MOCK_DIAGRAM_DIAMOND,
 } from './mocks/diagram-mocks';
+export {
+  createStressTestDiagram,
+  type StressTestMetrics,
+} from './mocks/stress-test-diagram';
