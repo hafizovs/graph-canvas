@@ -626,8 +626,16 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Complete or cancel link; end pan or rubber-band. (Waypoint/segment drag use document listeners.) */
   protected onContainerPointerUp(event: PointerEvent): void {
     if (this._panning) {
+      const wasClick = Math.hypot(
+        event.clientX - this._panning.startClientX,
+        event.clientY - this._panning.startClientY
+      ) < GraphEditorComponent.DRAG_THRESHOLD_PX;
       this._panning.target.releasePointerCapture?.(this._panning.pointerId);
       this._panning = null;
+      if (wasClick) {
+        this.selectedWaypoint.set(null);
+        this.state.clearSelection();
+      }
       return;
     }
     if (this._rubberBand) {
@@ -983,7 +991,8 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
     const svg = this.svgContainer?.nativeElement;
     const isMiddle = event.button === 1;
-    const isLeftWithSpace = event.button === 0 && this.state.spaceKeyDown();
+    const spaceHeld = this.state.spaceKeyDown() || (typeof event.getModifierState === 'function' && event.getModifierState(' '));
+    const isLeftWithSpace = event.button === 0 && spaceHeld;
     const isLeftWithPanTool = event.button === 0 && !event.shiftKey && this.state.panToolActive();
     const isShiftLeft = event.button === 0 && event.shiftKey;
 
