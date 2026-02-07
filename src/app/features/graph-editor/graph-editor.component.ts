@@ -984,9 +984,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     const svg = this.svgContainer?.nativeElement;
     const isMiddle = event.button === 1;
     const isLeftWithSpace = event.button === 0 && this.state.spaceKeyDown();
+    const isLeftWithPanTool = event.button === 0 && !event.shiftKey && this.state.panToolActive();
     const isShiftLeft = event.button === 0 && event.shiftKey;
 
-    if ((isMiddle || isLeftWithSpace) && svg && this.interactionEnabled('pan')) {
+    if ((isMiddle || isLeftWithSpace || isLeftWithPanTool) && svg && this.interactionEnabled('pan')) {
       const targetEl = event.target as Element;
       this._panning = {
         startClientX: event.clientX,
@@ -1048,9 +1049,9 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.undoRedo.redo();
   }
 
-  /** Whether pan mode is active (Space or middle-drag) for cursor styling. */
+  /** Whether pan mode is active (Space, pan tool, or middle-drag) for cursor styling. */
   protected get isPanMode(): boolean {
-    return this.state.spaceKeyDown() || this._panning !== null;
+    return this.state.spaceKeyDown() || this.state.panToolActive() || this._panning !== null;
   }
 
   /** Normalized selection rect for drawing (x, y, width, height). */
@@ -1136,6 +1137,24 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected onZoomToSelection(): void {
     const { width, height } = this.getContainerSize();
     this.viewport.zoomToSelection(40, width, height);
+  }
+
+  /** Toggle Pan tool (toolbar button). */
+  protected onPanToolToggle(): void {
+    this.state.setPanToolActive(!this.state.panToolActive());
+  }
+
+  /** Reset zoom to 100%. */
+  protected onResetZoom(): void {
+    const { width, height } = this.getContainerSize();
+    this.viewport.resetZoom(width, height);
+  }
+
+  /** Current zoom as percentage for toolbar display. */
+  protected zoomPercent(): number {
+    const { width } = this.getContainerSize();
+    const vb = this.state.viewBox();
+    return Math.round((width / vb.width) * 100);
   }
 
   /** Group selected nodes into a GroupNode. */

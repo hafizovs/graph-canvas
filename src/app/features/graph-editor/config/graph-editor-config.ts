@@ -20,6 +20,10 @@ export interface GraphEditorToolbarConfig {
   lockUnlock?: boolean;
   connectorStyle?: boolean;
   zoom?: boolean;
+  panTool?: boolean;
+  zoomReset100?: boolean;
+  zoomIndicator?: boolean;
+  tooltips?: boolean;
   snapToGrid?: boolean;
   examples?: boolean;
   saveLoad?: boolean;
@@ -38,6 +42,7 @@ export interface GraphEditorKeyboardConfig {
   escape?: boolean;
   selectAll?: boolean;
   copyPaste?: boolean;
+  duplicate?: boolean;
   undoRedo?: boolean;
   delete?: boolean;
   rotate?: boolean;
@@ -91,6 +96,10 @@ const DEFAULT_TOOLBAR: Required<GraphEditorToolbarConfig> = {
   lockUnlock: true,
   connectorStyle: true,
   zoom: true,
+  panTool: true,
+  zoomReset100: true,
+  zoomIndicator: true,
+  tooltips: true,
   snapToGrid: true,
   examples: true,
   saveLoad: true,
@@ -107,6 +116,7 @@ const DEFAULT_KEYBOARD: Required<GraphEditorKeyboardConfig> = {
   escape: true,
   selectAll: true,
   copyPaste: true,
+  duplicate: true,
   undoRedo: true,
   delete: true,
   rotate: true,

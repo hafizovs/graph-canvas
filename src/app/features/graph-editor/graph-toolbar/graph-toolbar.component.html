@@ -5,7 +5,7 @@
     class="toolbar-btn"
     [disabled]="disabled()"
     (click)="onAddNode()"
-    title="Add node"
+    [attr.title]="show('tooltips') !== false ? 'Add node' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <line x1="12" y1="5" x2="12" y2="19" />
@@ -20,7 +20,7 @@
     class="toolbar-btn"
     [disabled]="!hasSelection()"
     (click)="onDeleteSelection()"
-    title="Delete selected"
+    [attr.title]="show('tooltips') !== false ? 'Delete (Delete)' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <polyline points="3 6 5 6 21 6" />
@@ -37,7 +37,7 @@
     class="toolbar-btn"
     [disabled]="!hasNodeSelection()"
     (click)="onRotateCw()"
-    title="Rotate 90° clockwise (R)"
+    [attr.title]="show('tooltips') !== false ? 'Rotate 90° CW (R)' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M21 12a9 9 0 1 1-9-9c2.5 0 4.9 1 6.7 2.7L21 3" />
@@ -50,7 +50,7 @@
     class="toolbar-btn"
     [disabled]="!hasNodeSelection()"
     (click)="onRotateCcw()"
-    title="Rotate 90° counter-clockwise (Shift+R)"
+    [attr.title]="show('tooltips') !== false ? 'Rotate 90° CCW (Shift+R)' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.7 2.7L3 21" />
@@ -66,7 +66,7 @@
     class="toolbar-btn"
     [disabled]="!canAlign()"
     (click)="onAlign('alignLeft')"
-    title="Align left"
+    [attr.title]="show('tooltips') !== false ? 'Align left' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="4" y="5" width="6" height="4" />
@@ -80,7 +80,7 @@
     class="toolbar-btn"
     [disabled]="!canAlign()"
     (click)="onAlign('alignCenterH')"
-    title="Align center (horizontal)"
+    [attr.title]="show('tooltips') !== false ? 'Align center' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="7" y="5" width="10" height="4" />
@@ -94,7 +94,7 @@
     class="toolbar-btn"
     [disabled]="!canAlign()"
     (click)="onAlign('alignRight')"
-    title="Align right"
+    [attr.title]="show('tooltips') !== false ? 'Align right' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="14" y="5" width="6" height="4" />
@@ -108,7 +108,7 @@
     class="toolbar-btn"
     [disabled]="!canAlign()"
     (click)="onAlign('alignTop')"
-    title="Align top"
+    [attr.title]="show('tooltips') !== false ? 'Align top' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="4" y="4" width="6" height="5" />
@@ -122,7 +122,7 @@
     class="toolbar-btn"
     [disabled]="!canAlign()"
     (click)="onAlign('alignMiddleV')"
-    title="Align middle (vertical)"
+    [attr.title]="show('tooltips') !== false ? 'Align middle' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="4" y="6" width="6" height="5" />
@@ -136,7 +136,7 @@
     class="toolbar-btn"
     [disabled]="!canAlign()"
     (click)="onAlign('alignBottom')"
-    title="Align bottom"
+    [attr.title]="show('tooltips') !== false ? 'Align bottom' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="4" y="15" width="6" height="5" />
@@ -150,7 +150,7 @@
     class="toolbar-btn"
     [disabled]="!canDistribute()"
     (click)="onAlign('distributeH')"
-    title="Distribute horizontally"
+    [attr.title]="show('tooltips') !== false ? 'Distribute horizontally' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="8" width="4" height="8" />
@@ -164,7 +164,7 @@
     class="toolbar-btn"
     [disabled]="!canDistribute()"
     (click)="onAlign('distributeV')"
-    title="Distribute vertically"
+    [attr.title]="show('tooltips') !== false ? 'Distribute vertically' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="6" y="3" width="12" height="4" />
@@ -181,7 +181,7 @@
     class="toolbar-btn"
     [disabled]="!canGroup()"
     (click)="onGroup()"
-    title="Group selected nodes (Ctrl+G)"
+    [attr.title]="show('tooltips') !== false ? 'Group (Ctrl+G)' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="8" height="8" rx="1" />
@@ -197,7 +197,7 @@
     class="toolbar-btn"
     [disabled]="!canUngroup()"
     (click)="onUngroup()"
-    title="Ungroup (Ctrl+Shift+G)"
+    [attr.title]="show('tooltips') !== false ? 'Ungroup (Ctrl+Shift+G)' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="8" height="8" rx="1" />
@@ -216,7 +216,7 @@
     class="toolbar-btn"
     [disabled]="!hasSelection()"
     (click)="onBringToFront()"
-    title="Bring to front"
+    [attr.title]="show('tooltips') !== false ? 'Bring to front' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="4" y="8" width="12" height="8" rx="1" />
@@ -229,7 +229,7 @@
     class="toolbar-btn"
     [disabled]="!hasSelection()"
     (click)="onSendToBack()"
-    title="Send to back"
+    [attr.title]="show('tooltips') !== false ? 'Send to back' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="8" y="14" width="12" height="8" rx="1" />
@@ -244,7 +244,7 @@
     class="toolbar-btn"
     [disabled]="!hasSelection()"
     (click)="onLockUnlock()"
-    [title]="hasLockedSelection() ? 'Unlock selected' : 'Lock selected'"
+    [attr.title]="show('tooltips') !== false ? (hasLockedSelection() ? 'Unlock selected' : 'Lock selected') : null"
   >
     @if (hasLockedSelection()) {
       <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -267,7 +267,7 @@
   <select
     class="toolbar-select"
     (change)="onLinkRoutingChange($event)"
-    title="Connector style (Straight / Orthogonal)"
+    [attr.title]="show('tooltips') !== false ? 'Connector style (Straight / Orthogonal)' : null"
   >
     <option value="straight" [selected]="linkRouting() === 'straight'">Straight</option>
     <option value="orthogonal" [selected]="linkRouting() === 'orthogonal'">Orthogonal</option>
@@ -275,12 +275,28 @@
   }
   @if (show('zoom')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
+  @if (show('panTool')) {
+  <button
+    type="button"
+    class="toolbar-btn"
+    [class.toolbar-btn-active]="panToolActive()"
+    [attr.aria-pressed]="panToolActive()"
+    [disabled]="disabled()"
+    (click)="onPanToolToggle()"
+    [attr.title]="show('tooltips') !== false ? 'Pan (Space + drag)' : null"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3-3 3-3M19 9l3 3-3 3M2 12h20M12 2v20" />
+    </svg>
+    <span>Pan</span>
+  </button>
+  }
   <button
     type="button"
     class="toolbar-btn"
     [disabled]="disabled()"
     (click)="onZoomIn()"
-    title="Zoom in"
+    [attr.title]="show('tooltips') !== false ? 'Zoom in' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="11" cy="11" r="8" />
@@ -295,7 +311,7 @@
     class="toolbar-btn"
     [disabled]="disabled()"
     (click)="onZoomOut()"
-    title="Zoom out"
+    [attr.title]="show('tooltips') !== false ? 'Zoom out' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="11" cy="11" r="8" />
@@ -304,12 +320,26 @@
     </svg>
     <span>Zoom out</span>
   </button>
+  @if (show('zoomReset100')) {
+  <button
+    type="button"
+    class="toolbar-btn"
+    [disabled]="disabled()"
+    (click)="onResetZoom()"
+    [attr.title]="show('tooltips') !== false ? 'Reset zoom to 100%' : null"
+  >
+    <span>100%</span>
+  </button>
+  }
+  @if (show('zoomIndicator')) {
+  <span class="toolbar-zoom-percent" aria-live="polite">{{ zoomPercent() }}%</span>
+  }
   <button
     type="button"
     class="toolbar-btn"
     [disabled]="disabled()"
     (click)="onFitToView()"
-    title="Fit to view. Pan: Space + drag or middle mouse"
+    [attr.title]="show('tooltips') !== false ? 'Fit to view' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
@@ -321,7 +351,7 @@
     class="toolbar-btn"
     [disabled]="!hasSelection()"
     (click)="onZoomToSelection()"
-    title="Zoom to selection"
+    [attr.title]="show('tooltips') !== false ? 'Zoom to selection' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" />
@@ -339,7 +369,7 @@
     [class.toolbar-btn-active]="snapToGridEnabled()"
     [attr.aria-pressed]="snapToGridEnabled()"
     (click)="onSnapToGridToggle()"
-    title="Snap to grid"
+    [attr.title]="show('tooltips') !== false ? 'Snap to grid' : null"
   >
     <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
       <rect x="3" y="3" width="7" height="7" />
@@ -353,30 +383,30 @@
   @if (show('examples')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Examples:</span>
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleEmpty)" title="Empty diagram">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleEmpty)" [attr.title]="show('tooltips') !== false ? 'Empty diagram' : null">
     Empty
   </button>
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleSingle)" title="Single node">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleSingle)" [attr.title]="show('tooltips') !== false ? 'Single node' : null">
     Single
   </button>
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleChain)" title="Chain A→B→C">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleChain)" [attr.title]="show('tooltips') !== false ? 'Chain A→B→C' : null">
     Chain
   </button>
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleDiamond)" title="Diamond">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadExample(exampleDiamond)" [attr.title]="show('tooltips') !== false ? 'Diamond' : null">
     Diamond
   </button>
   }
   @if (show('fieldMapperDemo')) {
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onFieldMapperDemo()" title="Field mapper demo: two trees, DnD, Bezier links">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onFieldMapperDemo()" [attr.title]="show('tooltips') !== false ? 'Field mapper demo' : null">
     Field mapper demo
   </button>
   }
   @if (show('saveLoad')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onSave()" title="Save to file and storage">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onSave()" [attr.title]="show('tooltips') !== false ? 'Save (to file and storage)' : null">
     Save
   </button>
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFile(fileInput)" title="Load from file">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFile(fileInput)" [attr.title]="show('tooltips') !== false ? 'Load from file' : null">
     Load file
   </button>
   <input
@@ -386,7 +416,7 @@
     class="toolbar-file-input"
     (change)="onFileSelected($event, fileInput)"
   />
-  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFromStorage()" title="Load from storage">
+  <button type="button" class="toolbar-btn" [disabled]="disabled()" (click)="onLoadFromStorage()" [attr.title]="show('tooltips') !== false ? 'Load from storage' : null">
     Load storage
   </button>
   }

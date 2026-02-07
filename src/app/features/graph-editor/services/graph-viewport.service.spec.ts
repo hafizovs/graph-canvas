@@ -68,4 +68,14 @@ describe('GraphViewportService', () => {
     expect(vb.width).toBeGreaterThan(0);
     expect(vb.height).toBeGreaterThan(0);
   });
+
+  it('resetZoom sets viewBox to container size keeping center', () => {
+    state.setViewBox({ x: 100, y: 100, width: 400, height: 300 });
+    viewport.resetZoom(800, 600);
+    const vb = state.viewBox();
+    expect(vb.width).toBe(800);
+    expect(vb.height).toBe(600);
+    expect(vb.x).toBe(100 + 400 / 2 - 800 / 2);
+    expect(vb.y).toBe(100 + 300 / 2 - 600 / 2);
+  });
 });

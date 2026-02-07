@@ -147,6 +147,23 @@ export class GraphViewportService {
     this.zoomToCenter(1 / DEFAULT_ZOOM_FACTOR);
   }
 
+  /**
+   * Reset zoom to 100% (1:1). Keeps view center; container size determines viewBox size.
+   * @param containerWidth - Container width in pixels
+   * @param containerHeight - Container height in pixels
+   */
+  resetZoom(containerWidth: number, containerHeight: number): void {
+    const vb = this.state.viewBox();
+    const cx = vb.x + vb.width / 2;
+    const cy = vb.y + vb.height / 2;
+    this.state.setViewBox({
+      x: cx - containerWidth / 2,
+      y: cy - containerHeight / 2,
+      width: containerWidth,
+      height: containerHeight,
+    });
+  }
+
   private bboxOfNodeIds(
     d: { getNode(id: NodeId): { getRect(): Rect } | undefined },
     ids: Set<NodeId>

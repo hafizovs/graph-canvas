@@ -128,6 +128,14 @@ export class GraphOperationsService {
     return true;
   }
 
+  /** Duplicate selection (copy then paste with offset). Uses undo; selects pasted nodes. */
+  duplicateSelection(): void {
+    const nodeIds = this.state.selectedNodeIds();
+    if (nodeIds.size === 0) return;
+    this.copy();
+    this.paste();
+  }
+
   addLinkWaypoint(linkId: LinkId, index: number, x: number, y: number): boolean {
     const d = this.state.getDiagram();
     const link = d?.getLink(linkId);

@@ -44,6 +44,10 @@ export class GraphToolbarComponent {
   readonly linkRouting = input<LinkRouting>('orthogonal');
   /** True when all selected nodes/links are locked (shows Unlock vs Lock). */
   readonly hasLockedSelection = input<boolean>(false);
+  /** True when Pan tool is active (toolbar button pressed). */
+  readonly panToolActive = input<boolean>(false);
+  /** Current zoom as percentage (e.g. 100) for display. */
+  readonly zoomPercent = input<number>(100);
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
@@ -51,8 +55,10 @@ export class GraphToolbarComponent {
   readonly rotateCcw = output<void>();
   readonly group = output<void>();
   readonly ungroup = output<void>();
+  readonly panToolToggle = output<void>();
   readonly zoomIn = output<void>();
   readonly zoomOut = output<void>();
+  readonly resetZoom = output<void>();
   readonly fitToView = output<void>();
   readonly zoomToSelection = output<void>();
   readonly snapToGridToggle = output<void>();
@@ -114,12 +120,20 @@ export class GraphToolbarComponent {
     this.align.emit(mode);
   }
 
+  protected onPanToolToggle(): void {
+    this.panToolToggle.emit();
+  }
+
   protected onZoomIn(): void {
     this.zoomIn.emit();
   }
 
   protected onZoomOut(): void {
     this.zoomOut.emit();
+  }
+
+  protected onResetZoom(): void {
+    this.resetZoom.emit();
   }
 
   protected onFitToView(): void {

@@ -88,6 +88,13 @@ export class GraphEditorKeyboardDirective {
       }
       return;
     }
+    if (event.key === 'd' && (event.ctrlKey || event.metaKey)) {
+      if (this.isEnabled('duplicate')) {
+        event.preventDefault();
+        this.operations.duplicateSelection();
+      }
+      return;
+    }
     if (event.key === 'z' && (event.ctrlKey || event.metaKey) && !event.shiftKey) {
       if (this.isEnabled('undoRedo')) {
         event.preventDefault();
