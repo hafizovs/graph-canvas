@@ -224,6 +224,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Nodes to render in SVG: culled by viewport when viewportCullingEnabled, else all when not canvas, else []. */
   protected readonly nodesForRender = computed(() => {
+    this.renderTick(); // re-run on in-place diagram mutations (delete, etc.) when diagram reference unchanged
     if (this.useCanvasLayer()) return [];
     const d = this.diagram();
     if (!d) return [];
@@ -236,6 +237,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Links to render in SVG: culled by viewport when viewportCullingEnabled, else all when not canvas, else []. */
   protected readonly linksForRender = computed(() => {
+    this.renderTick(); // re-run on in-place diagram mutations (delete, etc.) when diagram reference unchanged
     if (this.useCanvasLayer()) return [];
     const d = this.diagram();
     if (!d) return [];
