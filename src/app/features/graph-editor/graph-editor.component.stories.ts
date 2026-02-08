@@ -93,3 +93,41 @@ export const Minimal: Story = {
     },
   },
 };
+
+export const WithLod: Story = {
+  args: {
+    config: {
+      toolbar: { visible: true },
+      palette: { visible: true },
+      initialDiagram: MOCK_DIAGRAM_CHAIN,
+      lod: { enabled: true, useCanvas: true, scaleThreshold: 0.5 },
+    },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'LOD enabled with Canvas 2D. Zoom out (scroll or toolbar) until scale is below 0.5 to see the canvas layer; pan and zoom still work. Zoom in to return to interactive SVG.',
+      },
+    },
+  },
+};
+
+export const WithLodNoCanvas: Story = {
+  args: {
+    config: {
+      toolbar: { visible: true },
+      palette: { visible: true },
+      initialDiagram: MOCK_DIAGRAM_CHAIN,
+      lod: { enabled: true, useCanvas: false, scaleThreshold: 0.5 },
+    },
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'LOD enabled without Canvas. When zoomed out (scale < 0.5) only pan/zoom work; node/link interaction is disabled. SVG remains visible.',
+      },
+    },
+  },
+};

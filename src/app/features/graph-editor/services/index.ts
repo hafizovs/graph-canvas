@@ -12,3 +12,7 @@ export { GraphUndoRedoService } from './graph-undo-redo.service';
 export { GraphOperationsService, type AlignMode } from './graph-operations.service';
 export { GraphViewportService } from './graph-viewport.service';
 export { GraphResizeService, type ResizeHandle } from './graph-resize.service';
+export {
+  GraphLodCanvasService,
+  type LodCanvasDrawOptions,
+} from './graph-lod-canvas.service';

@@ -43,6 +43,7 @@ import { GraphLinkGeometryService } from './services/graph-link-geometry.service
 import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
 import { GraphResizeService } from './services/graph-resize.service';
+import { GraphLodCanvasService } from './services/graph-lod-canvas.service';
 import { GraphEditorKeyboardDirective } from './directives/graph-editor-keyboard.directive';
 import { serializeDiagram } from '../../../graph-core';
 import type {
@@ -86,6 +87,8 @@ import { FIELD_MAPPER_DEMO_CLOSE } from '../field-mapper/field-mapper-demo-modal
 })
 export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   @ViewChild('svgContainer', { static: true }) svgContainer!: ElementRef<SVGSVGElement>;
+  @ViewChild('canvasWrapper') canvasWrapperRef?: ElementRef<HTMLElement>;
+  @ViewChild('lodCanvas') lodCanvasRef?: ElementRef<HTMLCanvasElement>;
 
   protected readonly state = inject(GraphEditorStateService);
   private readonly undoRedo = inject(GraphUndoRedoService);
@@ -94,6 +97,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   private readonly coordinate = inject(GraphCoordinateService);
   private readonly viewport = inject(GraphViewportService);
   private readonly resize = inject(GraphResizeService);
+  private readonly lodCanvasService = inject(GraphLodCanvasService);
 
   protected readonly diagram = this.state.diagram;
   protected readonly renderTick = this.state.renderTick;
@@ -147,6 +151,37 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   protected readonly effectiveConfig = this.injectedConfigSignal ?? computed(
     () => mergeWithDefaults(this.config())
   );
+
+  /** Container size (canvas wrapper) for scale calculation; updated via ResizeObserver. */
+  protected readonly containerSizeSignal = signal<{ width: number; height: number }>({
+    width: 800,
+    height: 600,
+  });
+
+  /** Scale = container size / viewBox size (min of w and h ratio). */
+  protected readonly scale = computed(() => {
+    const vb = this.viewBox();
+    const c = this.containerSizeSignal();
+    if (vb.width <= 0 || vb.height <= 0) return 1;
+    return Math.min(c.width / vb.width, c.height / vb.height);
+  });
+
+  /** LOD is active when enabled in config and scale below threshold. */
+  protected readonly lodActive = computed(() => {
+    const cfg = this.effectiveConfig();
+    if (!cfg.lod?.enabled) return false;
+    const s = this.scale();
+    const th = cfg.lod.scaleThreshold ?? 0.5;
+    return s < th;
+  });
+
+  /** Use Canvas 2D layer when LOD active and useCanvas is not false. */
+  protected readonly useCanvasLayer = computed(
+    () => this.lodActive() && (this.effectiveConfig().lod?.useCanvas !== false)
+  );
+
+  private _resizeObserver: ResizeObserver | null = null;
+  private _lodRafId = 0;
 
   protected readonly draggingFromPalette = signal<{
     shape: NodeShape;
@@ -306,6 +341,38 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const cfg = this.effectiveConfig();
       this.state.setSnapToGridEnabled(cfg.snapToGrid ?? this.snapToGrid());
     });
+    effect(() => {
+      if (!this.useCanvasLayer()) return;
+      this.diagram();
+      this.viewBox();
+      this.containerSizeSignal();
+      this.snapToGridEnabled();
+      this.effectiveConfig().gridVisible;
+      this.scheduleLodDraw();
+    });
+  }
+
+  private scheduleLodDraw(): void {
+    if (this._lodRafId) cancelAnimationFrame(this._lodRafId);
+    this._lodRafId = requestAnimationFrame(() => this.doLodDraw());
+  }
+
+  private doLodDraw(): void {
+    this._lodRafId = 0;
+    if (!this.useCanvasLayer()) return;
+    const canvas = this.lodCanvasRef?.nativeElement;
+    const diagram = this.diagram();
+    const vb = this.viewBox();
+    const size = this.containerSizeSignal();
+    if (!canvas || !diagram || vb.width <= 0 || vb.height <= 0) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const gridVisible =
+      (this.effectiveConfig().gridVisible !== false && this.snapToGridEnabled()) ?? false;
+    this.lodCanvasService.draw(ctx, diagram, vb, size.width, size.height, {
+      gridVisible,
+      gridStep: GRID_STEP,
+    });
   }
 
   protected onFieldMapperDemo(): void {
@@ -340,8 +407,22 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     } else {
       this.loadDiagramFromJson(MOCK_DIAGRAM_CHAIN);
     }
-    const el = this.svgContainer?.nativeElement;
-    if (el) el.addEventListener('wheel', this._wheelHandler, { passive: false });
+    const wrapper = this.canvasWrapperRef?.nativeElement;
+    if (wrapper) wrapper.addEventListener('wheel', this._wheelHandler, { passive: false });
+
+    if (wrapper && typeof ResizeObserver !== 'undefined') {
+      this._resizeObserver = new ResizeObserver((entries) => {
+        const entry = entries[0];
+        if (!entry) return;
+        const { width, height } = entry.contentRect;
+        this.containerSizeSignal.set({ width, height });
+      });
+      this._resizeObserver.observe(wrapper);
+      this.containerSizeSignal.set({
+        width: wrapper.clientWidth,
+        height: wrapper.clientHeight,
+      });
+    }
   }
 
   /** Storage key from config; null if localStorage disabled. */
@@ -407,8 +488,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Clear diagram reference and wheel listener on destroy. */
   ngOnDestroy(): void {
-    const el = this.svgContainer?.nativeElement;
-    if (el) el.removeEventListener('wheel', this._wheelHandler);
+    const wrapper = this.canvasWrapperRef?.nativeElement;
+    if (wrapper) wrapper.removeEventListener('wheel', this._wheelHandler);
+    if (this._lodRafId) cancelAnimationFrame(this._lodRafId);
+    this._resizeObserver?.disconnect();
+    this._resizeObserver = null;
     this.cleanupSegmentMoveListeners();
     this.state.setDiagram(null, false);
   }
@@ -591,14 +675,17 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       return;
     }
     const svg = this.svgContainer?.nativeElement;
-    if (this._panning && svg) {
-      const r = svg.getBoundingClientRect();
-      const vb = this.state.viewBox();
-      const dxSvg = ((this._panning.startClientX - event.clientX) * vb.width) / r.width;
-      const dySvg = ((this._panning.startClientY - event.clientY) * vb.height) / r.height;
-      this.viewport.pan(-dxSvg, -dySvg);
-      this._panning.startClientX = event.clientX;
-      this._panning.startClientY = event.clientY;
+    const wrapper = this.canvasWrapperRef?.nativeElement;
+    if (this._panning) {
+      const r = this.useCanvasLayer() && wrapper ? wrapper.getBoundingClientRect() : svg?.getBoundingClientRect();
+      if (r) {
+        const vb = this.state.viewBox();
+        const dxSvg = ((this._panning.startClientX - event.clientX) * vb.width) / r.width;
+        const dySvg = ((this._panning.startClientY - event.clientY) * vb.height) / r.height;
+        this.viewport.pan(-dxSvg, -dySvg);
+        this._panning.startClientX = event.clientX;
+        this._panning.startClientY = event.clientY;
+      }
       return;
     }
     if (this._rubberBand && svg) {
@@ -977,6 +1064,27 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Pan, rubber-band, or clear selection on canvas pointer down. */
   protected onCanvasPointerDown(event: PointerEvent): void {
+    const isMiddle = event.button === 1;
+    const spaceHeld = this.state.spaceKeyDown() || (typeof event.getModifierState === 'function' && event.getModifierState(' '));
+    const isLeftWithSpace = event.button === 0 && spaceHeld;
+    const isLeftWithPanTool = event.button === 0 && !event.shiftKey && this.state.panToolActive();
+
+    if (this.useCanvasLayer()) {
+      if ((isMiddle || isLeftWithSpace || isLeftWithPanTool) && this.interactionEnabled('pan')) {
+        const targetEl = event.target as Element;
+        this._panning = {
+          startClientX: event.clientX,
+          startClientY: event.clientY,
+          startViewBoxX: this.state.viewBox().x,
+          startViewBoxY: this.state.viewBox().y,
+          pointerId: event.pointerId,
+          target: targetEl,
+        };
+        targetEl.setPointerCapture?.(event.pointerId);
+      }
+      return;
+    }
+
     const target = event.target as Element;
     if (
       target.closest('g[app-graph-node]') ||
@@ -990,10 +1098,6 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     if (this.state.linkingFrom()) return;
 
     const svg = this.svgContainer?.nativeElement;
-    const isMiddle = event.button === 1;
-    const spaceHeld = this.state.spaceKeyDown() || (typeof event.getModifierState === 'function' && event.getModifierState(' '));
-    const isLeftWithSpace = event.button === 0 && spaceHeld;
-    const isLeftWithPanTool = event.button === 0 && !event.shiftKey && this.state.panToolActive();
     const isShiftLeft = event.button === 0 && event.shiftKey;
 
     if ((isMiddle || isLeftWithSpace || isLeftWithPanTool) && svg && this.interactionEnabled('pan')) {
@@ -1024,9 +1128,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Zoom at cursor (wheel). */
   protected onCanvasWheel(event: WheelEvent): void {
     event.preventDefault();
-    const svg = this.svgContainer?.nativeElement;
-    if (!svg) return;
-    const center = this.coordinate.clientToSvg(svg, event.clientX, event.clientY);
+    const wrapper = this.canvasWrapperRef?.nativeElement;
+    if (!wrapper) return;
+    const rect = wrapper.getBoundingClientRect();
+    const vb = this.viewBox();
+    const center = {
+      x: vb.x + ((event.clientX - rect.left) / rect.width) * vb.width,
+      y: vb.y + ((event.clientY - rect.top) / rect.height) * vb.height,
+    };
     const factor = event.deltaY > 0 ? 1 / 1.2 : 1.2;
     this.viewport.zoomAt(factor, center);
   }

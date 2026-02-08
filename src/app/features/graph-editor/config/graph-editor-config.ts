@@ -67,6 +67,16 @@ export interface GraphEditorUndoRedoConfig {
   maxSteps?: number;
 }
 
+/** LOD (Level of Detail): simplified render and optional Canvas 2D when zoomed out. */
+export interface GraphEditorLodConfig {
+  /** Enable LOD at low zoom (scale below threshold). Default false. */
+  enabled?: boolean;
+  /** When LOD is active, use Canvas 2D for rendering. Default true when LOD enabled. */
+  useCanvas?: boolean;
+  /** Scale threshold: LOD active when scale < this. Default 0.5. */
+  scaleThreshold?: number;
+}
+
 /**
  * Unified configuration for the graph editor.
  * All features are enabled by default except toolbar.visible (false).
@@ -77,6 +87,8 @@ export interface GraphEditorConfig {
   palette?: GraphEditorPaletteConfig;
   keyboard?: GraphEditorKeyboardConfig;
   interactions?: GraphEditorInteractionsConfig;
+  /** LOD and optional Canvas 2D when zoomed out. */
+  lod?: GraphEditorLodConfig;
   snapToGrid?: boolean;
   gridVisible?: boolean;
   /** null = empty diagram, omit = MOCK_DIAGRAM_CHAIN for demo */
@@ -139,6 +151,15 @@ const DEFAULT_UNDO_REDO: Required<GraphEditorUndoRedoConfig> = {
   maxSteps: 50,
 };
 
+/** Default LOD: disabled, useCanvas true, scaleThreshold 0.5. */
+export const DEFAULT_LOD_SCALE_THRESHOLD = 0.5;
+
+const DEFAULT_LOD: Required<GraphEditorLodConfig> = {
+  enabled: false,
+  useCanvas: true,
+  scaleThreshold: DEFAULT_LOD_SCALE_THRESHOLD,
+};
+
 /** Creates default config: all enabled except toolbar.visible = false. */
 export function createDefaultConfig(): GraphEditorConfig {
   return {
@@ -147,6 +168,7 @@ export function createDefaultConfig(): GraphEditorConfig {
     palette: { ...DEFAULT_PALETTE },
     keyboard: { ...DEFAULT_KEYBOARD },
     interactions: { ...DEFAULT_INTERACTIONS },
+    lod: { ...DEFAULT_LOD },
     snapToGrid: true,
     gridVisible: true,
     storageKey: 'graph-canvas-diagram',
@@ -169,5 +191,6 @@ export function mergeWithDefaults(user: GraphEditorConfig | null | undefined): G
       user.interactions !== undefined
         ? { ...DEFAULT_INTERACTIONS, ...user.interactions }
         : defaults.interactions,
+    lod: user.lod !== undefined ? { ...DEFAULT_LOD, ...user.lod } : defaults.lod,
   };
 }

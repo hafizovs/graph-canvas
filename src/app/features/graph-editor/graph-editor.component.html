@@ -63,15 +63,17 @@
     }
 
     <div
+      #canvasWrapper
       class="canvas-wrapper"
       [class.pan-mode]="isPanMode"
+      (pointerdown)="onCanvasPointerDown($event)"
     >
     <svg
       #svgContainer
       class="graph-svg"
+      [class.lod-hidden]="useCanvasLayer()"
       [attr.viewBox]="viewBox().x + ' ' + viewBox().y + ' ' + viewBox().width + ' ' + viewBox().height"
       preserveAspectRatio="xMidYMid meet"
-      (pointerdown)="onCanvasPointerDown($event)"
     >
       <defs>
         <pattern
@@ -224,6 +226,13 @@
         }
       </g>
     </svg>
+    <canvas
+      #lodCanvas
+      class="lod-canvas"
+      [class.visible]="useCanvasLayer()"
+      [attr.width]="containerSizeSignal().width"
+      [attr.height]="containerSizeSignal().height"
+    ></canvas>
     @if (nodeContextMenuPosition(); as pos) {
       <div
         class="node-context-menu-backdrop"
