@@ -29,6 +29,8 @@
     (fitToView)="onFitToView()"
     (zoomToSelection)="onZoomToSelection()"
     (snapToGridToggle)="onSnapToGridToggle()"
+    [lodEnabled]="state.lodEnabled()"
+    (lodToggle)="onLodToggle()"
     (loadExample)="onLoadExample($event)"
     (saveRequest)="onSave()"
     (loadFromFile)="onLoadFromFile($event)"

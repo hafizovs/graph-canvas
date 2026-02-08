@@ -181,7 +181,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Level 0: canvas only, no interaction. */
   protected readonly useCanvasOnly = computed(
     () =>
-      this.effectiveConfig().lod?.enabled &&
+      this.state.lodEnabled() &&
       this.effectiveConfig().lod?.useCanvas !== false &&
       this.currentLodMode() === 'canvasOnly'
   );
@@ -189,14 +189,14 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Level 1: canvas + hit testing. */
   protected readonly useCanvasWithHit = computed(
     () =>
-      this.effectiveConfig().lod?.enabled &&
+      this.state.lodEnabled() &&
       this.effectiveConfig().lod?.useCanvas !== false &&
       this.currentLodMode() === 'canvasHit'
   );
 
   /** Level 2: SVG with viewport culling. */
   protected readonly useSvgCulled = computed(
-    () => this.effectiveConfig().lod?.enabled && this.currentLodMode() === 'svgCulled'
+    () => this.state.lodEnabled() && this.currentLodMode() === 'svgCulled'
   );
 
   /** Show canvas layer when canvas-only or canvas+hit. */
@@ -403,8 +403,12 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     });
     effect(() => {
       const cfg = this.effectiveConfig();
+      this.state.setLodEnabled(cfg.lod?.enabled ?? false);
+    });
+    effect(() => {
+      const cfg = this.effectiveConfig();
       const lod = cfg.lod;
-      if (!lod?.enabled || lod.useCanvas === false) {
+      if (!this.state.lodEnabled() || !lod || lod.useCanvas === false) {
         this.currentLodMode.set(null);
         return;
       }
@@ -633,6 +637,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Toggle snap-to-grid (toolbar button). */
   protected onSnapToGridToggle(): void {
     this.state.toggleSnapToGrid();
+  }
+
+  /** Toggle LOD and Canvas (toolbar button). */
+  protected onLodToggle(): void {
+    this.state.toggleLodEnabled();
   }
 
   /** Start drag from palette; capture pointer and listen for move/up on document. */

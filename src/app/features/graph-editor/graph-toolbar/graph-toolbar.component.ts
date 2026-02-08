@@ -40,6 +40,8 @@ export class GraphToolbarComponent {
   /** True when 3+ nodes selected (for distribute buttons). */
   readonly canDistribute = input<boolean>(false);
   readonly snapToGridEnabled = input<boolean>(true);
+  /** True when LOD and Canvas rendering are enabled. */
+  readonly lodEnabled = input<boolean>(false);
   /** Current link routing for connector select (from selection or default). */
   readonly linkRouting = input<LinkRouting>('orthogonal');
   /** True when all selected nodes/links are locked (shows Unlock vs Lock). */
@@ -62,6 +64,7 @@ export class GraphToolbarComponent {
   readonly fitToView = output<void>();
   readonly zoomToSelection = output<void>();
   readonly snapToGridToggle = output<void>();
+  readonly lodToggle = output<void>();
   readonly loadExample = output<DiagramJson>();
   readonly saveRequest = output<void>();
   readonly loadFromFile = output<DiagramJson>();
@@ -146,6 +149,10 @@ export class GraphToolbarComponent {
 
   protected onSnapToGridToggle(): void {
     this.snapToGridToggle.emit();
+  }
+
+  protected onLodToggle(): void {
+    this.lodToggle.emit();
   }
 
   /** Emit loadExample with selected diagram JSON. */

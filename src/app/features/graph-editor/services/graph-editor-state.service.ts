@@ -49,6 +49,9 @@ export class GraphEditorStateService {
   /** When true, node positions snap to grid (add, move, paste, palette drop). */
   readonly snapToGridEnabled = signal(true);
 
+  /** When true, LOD (Level of Detail) and Canvas rendering are enabled at low zoom. */
+  readonly lodEnabled = signal(false);
+
   /** Default link routing for newly created links (used by createLink). */
   readonly defaultLinkRouting = signal<LinkRouting>('orthogonal');
 
@@ -76,6 +79,16 @@ export class GraphEditorStateService {
   /** Toggle snap-to-grid (for toolbar button). */
   toggleSnapToGrid(): void {
     this.snapToGridEnabled.update((v) => !v);
+  }
+
+  /** Set LOD and Canvas rendering on or off. */
+  setLodEnabled(value: boolean): void {
+    this.lodEnabled.set(value);
+  }
+
+  /** Toggle LOD and Canvas (for toolbar button). */
+  toggleLodEnabled(): void {
+    this.lodEnabled.update((v) => !v);
   }
 
   /** Set default link routing (for new links and toolbar select when no links selected). */

@@ -380,6 +380,26 @@
     <span>Snap to grid</span>
   </button>
   }
+  @if (show('lodToggle')) {
+  <button
+    type="button"
+    class="toolbar-btn"
+    [class.toolbar-btn-active]="lodEnabled()"
+    [attr.aria-pressed]="lodEnabled()"
+    (click)="onLodToggle()"
+    [attr.title]="show('tooltips') !== false ? 'LOD and Canvas rendering' : null"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg:rect x="2" y="2" width="8" height="8" rx="1" />
+      <svg:rect x="14" y="2" width="8" height="8" rx="1" />
+      <svg:rect x="14" y="14" width="8" height="8" rx="1" />
+      <svg:rect x="2" y="14" width="8" height="8" rx="1" />
+      <svg:line x1="12" y1="6" x2="12" y2="18" stroke-dasharray="2 2" />
+      <svg:line x1="6" y1="12" x2="18" y2="12" stroke-dasharray="2 2" />
+    </svg>
+    <span>LOD / Canvas</span>
+  </button>
+  }
   @if (show('examples')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Examples:</span>
