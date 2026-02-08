@@ -79,6 +79,14 @@ export interface GraphEditorLodConfig {
   interactiveScaleThreshold?: number;
   /** Never render all nodes in SVG when node count >= this; use canvas+hit instead. Default 500. */
   forceCanvasAboveNodeCount?: number;
+  /** Hysteresis: enter canvas-only when scale < this. Default 0.45. */
+  scaleThresholdEnter?: number;
+  /** Hysteresis: leave canvas-only when scale >= this. Default 0.55. */
+  scaleThresholdLeave?: number;
+  /** Hysteresis: leave canvas+hit for SVG when scale >= this. Default 1.2. */
+  interactiveScaleThresholdLeave?: number;
+  /** Hysteresis: leave SVG culled when scale < this. Default 1.1. */
+  interactiveScaleThresholdEnter?: number;
 }
 
 /**
@@ -161,12 +169,21 @@ export const DEFAULT_LOD_SCALE_THRESHOLD = 0.5;
 export const DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD = 1.2;
 export const DEFAULT_LOD_FORCE_CANVAS_ABOVE_NODE_COUNT = 500;
 
+export const DEFAULT_LOD_SCALE_THRESHOLD_ENTER = 0.45;
+export const DEFAULT_LOD_SCALE_THRESHOLD_LEAVE = 0.55;
+export const DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD_ENTER = 1.1;
+export const DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD_LEAVE = 1.2;
+
 const DEFAULT_LOD: Required<GraphEditorLodConfig> = {
   enabled: false,
   useCanvas: true,
   scaleThreshold: DEFAULT_LOD_SCALE_THRESHOLD,
   interactiveScaleThreshold: DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD,
   forceCanvasAboveNodeCount: DEFAULT_LOD_FORCE_CANVAS_ABOVE_NODE_COUNT,
+  scaleThresholdEnter: DEFAULT_LOD_SCALE_THRESHOLD_ENTER,
+  scaleThresholdLeave: DEFAULT_LOD_SCALE_THRESHOLD_LEAVE,
+  interactiveScaleThresholdEnter: DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD_ENTER,
+  interactiveScaleThresholdLeave: DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD_LEAVE,
 };
 
 /** Creates default config: all enabled except toolbar.visible = false. */

@@ -28,6 +28,7 @@ export const Stress500: Story = {
 };
 
 export const Stress1000: Story = {
+  tags: ['!autodocs'],
   args: {
     nodeCount: 1000,
   },
@@ -41,6 +42,7 @@ export const Stress1000: Story = {
 };
 
 export const Stress10000: Story = {
+  tags: ['!autodocs'],
   args: {
     nodeCount: 10000,
   },
@@ -56,6 +58,7 @@ export const Stress10000: Story = {
 };
 
 export const Stress100000: Story = {
+  tags: ['!autodocs'],
   args: {
     nodeCount: 100000,
   },

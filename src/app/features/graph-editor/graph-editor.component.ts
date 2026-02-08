@@ -170,43 +170,34 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Node count for LOD decisions. */
   private readonly nodeCount = computed(() => this.diagram()?.nodes.length ?? 0);
 
-  /** Level 0: canvas only, no interaction (scale < scaleThreshold). */
-  protected readonly useCanvasOnly = computed(() => {
-    const cfg = this.effectiveConfig();
-    if (!cfg.lod?.enabled || cfg.lod?.useCanvas === false) return false;
-    const s = this.scale();
-    const th = cfg.lod.scaleThreshold ?? 0.5;
-    return s < th;
-  });
-
   /** Force canvas+hit when node count >= this (never render all nodes in SVG). */
   private readonly forceCanvasAbove = computed(
     () => this.effectiveConfig().lod?.forceCanvasAboveNodeCount ?? 500
   );
 
-  /** Level 1: canvas + hit testing (medium zoom or count >= forceCanvasAbove). */
-  protected readonly useCanvasWithHit = computed(() => {
-    const cfg = this.effectiveConfig();
-    if (!cfg.lod?.enabled || cfg.lod?.useCanvas === false) return false;
-    const s = this.scale();
-    const th = cfg.lod.scaleThreshold ?? 0.5;
-    const th2 = cfg.lod.interactiveScaleThreshold ?? 1.2;
-    const n = this.nodeCount();
-    const forceN = this.forceCanvasAbove();
-    if (n >= forceN) return s >= th;
-    return s >= th && s < th2;
-  });
+  /** Current LOD mode: stateful with hysteresis to avoid flicker at scale boundaries. */
+  private readonly currentLodMode = signal<'canvasOnly' | 'canvasHit' | 'svgCulled' | null>(null);
 
-  /** Level 2: SVG with viewport culling (scale >= interactiveThreshold and count < forceN). */
-  protected readonly useSvgCulled = computed(() => {
-    const cfg = this.effectiveConfig();
-    if (!cfg.lod?.enabled) return false;
-    const s = this.scale();
-    const th2 = cfg.lod.interactiveScaleThreshold ?? 1.2;
-    const n = this.nodeCount();
-    const forceN = this.forceCanvasAbove();
-    return s >= th2 && n < forceN;
-  });
+  /** Level 0: canvas only, no interaction. */
+  protected readonly useCanvasOnly = computed(
+    () =>
+      this.effectiveConfig().lod?.enabled &&
+      this.effectiveConfig().lod?.useCanvas !== false &&
+      this.currentLodMode() === 'canvasOnly'
+  );
+
+  /** Level 1: canvas + hit testing. */
+  protected readonly useCanvasWithHit = computed(
+    () =>
+      this.effectiveConfig().lod?.enabled &&
+      this.effectiveConfig().lod?.useCanvas !== false &&
+      this.currentLodMode() === 'canvasHit'
+  );
+
+  /** Level 2: SVG with viewport culling. */
+  protected readonly useSvgCulled = computed(
+    () => this.effectiveConfig().lod?.enabled && this.currentLodMode() === 'svgCulled'
+  );
 
   /** Show canvas layer when canvas-only or canvas+hit. */
   protected readonly useCanvasLayer = computed(
@@ -409,6 +400,43 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       const cfg = this.effectiveConfig();
       this.state.setSnapToGridEnabled(cfg.snapToGrid ?? this.snapToGrid());
+    });
+    effect(() => {
+      const cfg = this.effectiveConfig();
+      const lod = cfg.lod;
+      if (!lod?.enabled || lod.useCanvas === false) {
+        this.currentLodMode.set(null);
+        return;
+      }
+      const s = this.scale();
+      const n = this.nodeCount();
+      const forceN = this.forceCanvasAbove();
+      const thEnter = lod.scaleThresholdEnter ?? 0.45;
+      const thLeave = lod.scaleThresholdLeave ?? 0.55;
+      const th2Enter = lod.interactiveScaleThresholdEnter ?? 1.1;
+      const th2Leave = lod.interactiveScaleThresholdLeave ?? 1.2;
+      const singleTh = lod.scaleThreshold ?? 0.5;
+      const singleTh2 = lod.interactiveScaleThreshold ?? 1.2;
+
+      const current = this.currentLodMode();
+      let next: 'canvasOnly' | 'canvasHit' | 'svgCulled';
+
+      if (current === null) {
+        if (s < singleTh) next = 'canvasOnly';
+        else if (n >= forceN || s < singleTh2) next = 'canvasHit';
+        else next = 'svgCulled';
+      } else {
+        if (current === 'canvasOnly') {
+          next = s >= thLeave ? 'canvasHit' : 'canvasOnly';
+        } else if (current === 'canvasHit') {
+          if (s < thEnter) next = 'canvasOnly';
+          else if (s >= th2Leave && n < forceN) next = 'svgCulled';
+          else next = 'canvasHit';
+        } else {
+          next = s < th2Enter ? 'canvasHit' : 'svgCulled';
+        }
+      }
+      if (next !== current) this.currentLodMode.set(next);
     });
     effect(() => {
       if (!this.useCanvasLayer()) return;
