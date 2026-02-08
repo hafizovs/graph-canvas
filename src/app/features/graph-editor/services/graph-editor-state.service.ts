@@ -52,6 +52,9 @@ export class GraphEditorStateService {
   /** When true, LOD (Level of Detail) and Canvas rendering are enabled at low zoom. */
   readonly lodEnabled = signal(false);
 
+  /** When true, only nodes/links intersecting the viewport are rendered (SVG and LOD canvas). */
+  readonly viewportCullingEnabled = signal(true);
+
   /** Default link routing for newly created links (used by createLink). */
   readonly defaultLinkRouting = signal<LinkRouting>('orthogonal');
 
@@ -89,6 +92,16 @@ export class GraphEditorStateService {
   /** Toggle LOD and Canvas (for toolbar button). */
   toggleLodEnabled(): void {
     this.lodEnabled.update((v) => !v);
+  }
+
+  /** Set viewport culling on or off. */
+  setViewportCullingEnabled(value: boolean): void {
+    this.viewportCullingEnabled.set(value);
+  }
+
+  /** Toggle viewport culling (for toolbar button). */
+  toggleViewportCulling(): void {
+    this.viewportCullingEnabled.update((v) => !v);
   }
 
   /** Set default link routing (for new links and toolbar select when no links selected). */

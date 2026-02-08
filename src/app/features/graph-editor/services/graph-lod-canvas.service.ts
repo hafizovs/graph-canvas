@@ -9,6 +9,8 @@ import { getVisibleInViewBox } from './viewport-culling';
 export interface LodCanvasDrawOptions {
   gridVisible?: boolean;
   gridStep?: number;
+  /** When true (default), only draw nodes/links intersecting viewBox. When false, draw all. */
+  viewportCulling?: boolean;
 }
 
 /** Encode hit index to RGB. Use 1-based: 0 = no hit, 1..n = nodes, n+1..n+m = links. Max ~16M. */
@@ -50,7 +52,7 @@ export class GraphLodCanvasService {
     canvasHeight: number,
     options: LodCanvasDrawOptions = {}
   ): void {
-    const { gridVisible = false, gridStep = GRID_STEP } = options;
+    const { gridVisible = false, gridStep = GRID_STEP, viewportCulling = true } = options;
 
     const toPx = (svgX: number, svgY: number): { x: number; y: number } => ({
       x: ((svgX - viewBox.x) / viewBox.width) * canvasWidth,
@@ -65,9 +67,12 @@ export class GraphLodCanvasService {
     }
 
     const { nodeIds: visibleNodeIds, linkIds: visibleLinkIds } =
-      viewBox.width > 0 && viewBox.height > 0
+      viewportCulling && viewBox.width > 0 && viewBox.height > 0
         ? getVisibleInViewBox(diagram, viewBox as Rect, this.linkGeometry)
-        : { nodeIds: new Set<NodeId>(), linkIds: new Set<LinkId>() };
+        : {
+            nodeIds: new Set(diagram.nodes.map((n) => n.id)),
+            linkIds: new Set(diagram.links.map((l) => l.id)),
+          };
 
     const links = [...diagram.links]
       .filter((l) => visibleLinkIds.has(l.id))
@@ -96,8 +101,11 @@ export class GraphLodCanvasService {
     diagram: Diagram,
     viewBox: { x: number; y: number; width: number; height: number },
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
+    options: LodCanvasDrawOptions = {}
   ): HitBufferResult {
+    const { viewportCulling = true } = options;
+
     const toPx = (svgX: number, svgY: number): { x: number; y: number } => ({
       x: ((svgX - viewBox.x) / viewBox.width) * canvasWidth,
       y: ((svgY - viewBox.y) / viewBox.height) * canvasHeight,
@@ -107,9 +115,12 @@ export class GraphLodCanvasService {
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     const { nodeIds: visibleNodeIds, linkIds: visibleLinkIds } =
-      viewBox.width > 0 && viewBox.height > 0
+      viewportCulling && viewBox.width > 0 && viewBox.height > 0
         ? getVisibleInViewBox(diagram, viewBox as Rect, this.linkGeometry)
-        : { nodeIds: new Set<NodeId>(), linkIds: new Set<LinkId>() };
+        : {
+            nodeIds: new Set(diagram.nodes.map((n) => n.id)),
+            linkIds: new Set(diagram.links.map((l) => l.id)),
+          };
 
     const links = [...diagram.links]
       .filter((l) => visibleLinkIds.has(l.id))

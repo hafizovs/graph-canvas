@@ -29,6 +29,7 @@ export interface GraphEditorToolbarConfig {
   saveLoad?: boolean;
   fieldMapperDemo?: boolean;
   lodToggle?: boolean;
+  viewportCullingToggle?: boolean;
 }
 
 /** Palette feature flags. */
@@ -135,6 +136,7 @@ const DEFAULT_TOOLBAR: Required<GraphEditorToolbarConfig> = {
   saveLoad: true,
   fieldMapperDemo: true,
   lodToggle: true,
+  viewportCullingToggle: true,
 };
 
 const DEFAULT_PALETTE: Required<GraphEditorPaletteConfig> = {

@@ -213,24 +213,28 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     return getVisibleInViewBox(d, vb, this.linkGeometry);
   });
 
-  /** Nodes to render in SVG: visible when useSvgCulled, else all when not canvas, else []. */
+  /** Nodes to render in SVG: culled by viewport when viewportCullingEnabled, else all when not canvas, else []. */
   protected readonly nodesForRender = computed(() => {
     if (this.useCanvasLayer()) return [];
     const d = this.diagram();
     if (!d) return [];
-    if (!this.useSvgCulled()) return d.nodes;
-    const { nodeIds } = this.visibleInViewBox();
-    return d.nodes.filter((n) => nodeIds.has(n.id));
+    if (this.state.viewportCullingEnabled()) {
+      const { nodeIds } = this.visibleInViewBox();
+      return d.nodes.filter((n) => nodeIds.has(n.id));
+    }
+    return d.nodes;
   });
 
-  /** Links to render in SVG: visible when useSvgCulled, else all when not canvas, else []. */
+  /** Links to render in SVG: culled by viewport when viewportCullingEnabled, else all when not canvas, else []. */
   protected readonly linksForRender = computed(() => {
     if (this.useCanvasLayer()) return [];
     const d = this.diagram();
     if (!d) return [];
-    if (!this.useSvgCulled()) return d.links;
-    const { linkIds } = this.visibleInViewBox();
-    return d.links.filter((l) => linkIds.has(l.id));
+    if (this.state.viewportCullingEnabled()) {
+      const { linkIds } = this.visibleInViewBox();
+      return d.links.filter((l) => linkIds.has(l.id));
+    }
+    return d.links;
   });
 
   private _resizeObserver: ResizeObserver | null = null;
@@ -480,9 +484,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     if (!ctx) return;
     const gridVisible =
       (this.effectiveConfig().gridVisible !== false && this.snapToGridEnabled()) ?? false;
+    const viewportCulling = this.state.viewportCullingEnabled();
     this.lodCanvasService.draw(ctx, diagram, vb, size.width, size.height, {
       gridVisible,
       gridStep: GRID_STEP,
+      viewportCulling,
     });
     if (this.useCanvasWithHit()) {
       const w = Math.max(1, Math.floor(size.width));
@@ -499,7 +505,8 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
           diagram,
           vb,
           w,
-          h
+          h,
+          { viewportCulling }
         );
       }
     } else {
@@ -642,6 +649,10 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   /** Toggle LOD and Canvas (toolbar button). */
   protected onLodToggle(): void {
     this.state.toggleLodEnabled();
+  }
+
+  protected onViewportCullingToggle(): void {
+    this.state.toggleViewportCulling();
   }
 
   /** Start drag from palette; capture pointer and listen for move/up on document. */

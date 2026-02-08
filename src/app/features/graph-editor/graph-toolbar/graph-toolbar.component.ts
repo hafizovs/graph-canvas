@@ -42,6 +42,8 @@ export class GraphToolbarComponent {
   readonly snapToGridEnabled = input<boolean>(true);
   /** True when LOD and Canvas rendering are enabled. */
   readonly lodEnabled = input<boolean>(false);
+  /** True when viewport culling is enabled (render only visible nodes/links). */
+  readonly viewportCullingEnabled = input<boolean>(true);
   /** Current link routing for connector select (from selection or default). */
   readonly linkRouting = input<LinkRouting>('orthogonal');
   /** True when all selected nodes/links are locked (shows Unlock vs Lock). */
@@ -65,6 +67,7 @@ export class GraphToolbarComponent {
   readonly zoomToSelection = output<void>();
   readonly snapToGridToggle = output<void>();
   readonly lodToggle = output<void>();
+  readonly viewportCullingToggle = output<void>();
   readonly loadExample = output<DiagramJson>();
   readonly saveRequest = output<void>();
   readonly loadFromFile = output<DiagramJson>();
@@ -153,6 +156,10 @@ export class GraphToolbarComponent {
 
   protected onLodToggle(): void {
     this.lodToggle.emit();
+  }
+
+  protected onViewportCullingToggle(): void {
+    this.viewportCullingToggle.emit();
   }
 
   /** Emit loadExample with selected diagram JSON. */

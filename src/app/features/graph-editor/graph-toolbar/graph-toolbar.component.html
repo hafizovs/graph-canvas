@@ -400,6 +400,22 @@
     <span>LOD / Canvas</span>
   </button>
   }
+  @if (show('viewportCullingToggle')) {
+  <button
+    type="button"
+    class="toolbar-btn"
+    [class.toolbar-btn-active]="viewportCullingEnabled()"
+    [attr.aria-pressed]="viewportCullingEnabled()"
+    (click)="onViewportCullingToggle()"
+    [attr.title]="show('tooltips') !== false ? 'Viewport culling: render only visible area' : null"
+  >
+    <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <svg:rect x="3" y="3" width="18" height="18" rx="1" />
+      <svg:rect x="7" y="7" width="10" height="10" stroke-dasharray="2 2" />
+    </svg>
+    <span>Viewport</span>
+  </button>
+  }
   @if (show('examples')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   <span class="toolbar-label">Examples:</span>
