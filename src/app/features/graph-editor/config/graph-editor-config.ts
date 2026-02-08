@@ -87,6 +87,11 @@ export interface GraphEditorLodConfig {
   interactiveScaleThresholdLeave?: number;
   /** Hysteresis: leave SVG culled when scale < this. Default 1.1. */
   interactiveScaleThresholdEnter?: number;
+  /**
+   * When set, switch to SVG (svgCulled) at close zoom even when node count >= forceCanvasAboveNodeCount.
+   * Example: 1.5 or 2 — at scale >= this value use SVG for crisp rendering; culling keeps only visible nodes/links.
+   */
+  scaleAboveForceSvg?: number;
 }
 
 /**
@@ -174,7 +179,7 @@ export const DEFAULT_LOD_SCALE_THRESHOLD_LEAVE = 0.55;
 export const DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD_ENTER = 1.1;
 export const DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD_LEAVE = 1.2;
 
-const DEFAULT_LOD: Required<GraphEditorLodConfig> = {
+const DEFAULT_LOD: Omit<Required<GraphEditorLodConfig>, 'scaleAboveForceSvg'> = {
   enabled: false,
   useCanvas: true,
   scaleThreshold: DEFAULT_LOD_SCALE_THRESHOLD,

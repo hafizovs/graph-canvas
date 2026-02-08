@@ -418,11 +418,17 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const singleTh = lod.scaleThreshold ?? 0.5;
       const singleTh2 = lod.interactiveScaleThreshold ?? 1.2;
 
+      const scaleAboveForceSvg = lod.scaleAboveForceSvg;
       const current = this.currentLodMode();
       let next: 'canvasOnly' | 'canvasHit' | 'svgCulled';
 
       if (current === null) {
         if (s < singleTh) next = 'canvasOnly';
+        else if (
+          scaleAboveForceSvg != null &&
+          s >= scaleAboveForceSvg
+        )
+          next = 'svgCulled';
         else if (n >= forceN || s < singleTh2) next = 'canvasHit';
         else next = 'svgCulled';
       } else {
@@ -430,7 +436,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
           next = s >= thLeave ? 'canvasHit' : 'canvasOnly';
         } else if (current === 'canvasHit') {
           if (s < thEnter) next = 'canvasOnly';
-          else if (s >= th2Leave && n < forceN) next = 'svgCulled';
+          else if (
+            (s >= th2Leave && n < forceN) ||
+            (scaleAboveForceSvg != null && s >= scaleAboveForceSvg)
+          )
+            next = 'svgCulled';
           else next = 'canvasHit';
         } else {
           next = s < th2Enter ? 'canvasHit' : 'svgCulled';

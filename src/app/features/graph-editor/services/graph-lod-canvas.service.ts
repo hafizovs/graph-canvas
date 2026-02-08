@@ -4,6 +4,7 @@ import type { NodeId, LinkId } from '../../../../graph-core';
 import type { PointLike, Rect } from '../../../../graph-core';
 import { GraphLinkGeometryService } from './graph-link-geometry.service';
 import { GRID_STEP } from './graph-coordinate.service';
+import { getVisibleInViewBox } from './viewport-culling';
 
 export interface LodCanvasDrawOptions {
   gridVisible?: boolean;
@@ -57,18 +58,27 @@ export class GraphLodCanvasService {
     });
 
     ctx.save();
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
     if (gridVisible && viewBox.width > 0 && viewBox.height > 0) {
       this.drawGrid(ctx, viewBox, canvasWidth, canvasHeight, gridStep, toPx);
     }
 
-    // Draw links below nodes
-    const links = [...diagram.links].sort((a, b) => a.zIndex - b.zIndex);
+    const { nodeIds: visibleNodeIds, linkIds: visibleLinkIds } =
+      viewBox.width > 0 && viewBox.height > 0
+        ? getVisibleInViewBox(diagram, viewBox as Rect, this.linkGeometry)
+        : { nodeIds: new Set<NodeId>(), linkIds: new Set<LinkId>() };
+
+    const links = [...diagram.links]
+      .filter((l) => visibleLinkIds.has(l.id))
+      .sort((a, b) => a.zIndex - b.zIndex);
     for (const link of links) {
       this.drawLink(ctx, diagram, link, toPx);
     }
 
-    const nodes = [...diagram.nodes].sort((a, b) => a.zIndex - b.zIndex);
+    const nodes = [...diagram.nodes]
+      .filter((n) => visibleNodeIds.has(n.id))
+      .sort((a, b) => a.zIndex - b.zIndex);
     for (const node of nodes) {
       this.drawNode(ctx, node, toPx);
     }
@@ -96,8 +106,17 @@ export class GraphLodCanvasService {
     ctx.save();
     ctx.clearRect(0, 0, canvasWidth, canvasHeight);
 
-    const links = [...diagram.links].sort((a, b) => a.zIndex - b.zIndex);
-    const nodes = [...diagram.nodes].sort((a, b) => a.zIndex - b.zIndex);
+    const { nodeIds: visibleNodeIds, linkIds: visibleLinkIds } =
+      viewBox.width > 0 && viewBox.height > 0
+        ? getVisibleInViewBox(diagram, viewBox as Rect, this.linkGeometry)
+        : { nodeIds: new Set<NodeId>(), linkIds: new Set<LinkId>() };
+
+    const links = [...diagram.links]
+      .filter((l) => visibleLinkIds.has(l.id))
+      .sort((a, b) => a.zIndex - b.zIndex);
+    const nodes = [...diagram.nodes]
+      .filter((n) => visibleNodeIds.has(n.id))
+      .sort((a, b) => a.zIndex - b.zIndex);
     const nodeIds: NodeId[] = nodes.map((n) => n.id);
     const linkIds: LinkId[] = links.map((l) => l.id);
 
