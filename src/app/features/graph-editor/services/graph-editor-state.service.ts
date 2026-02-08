@@ -58,6 +58,9 @@ export class GraphEditorStateService {
   /** Default link routing for newly created links (used by createLink). */
   readonly defaultLinkRouting = signal<LinkRouting>('orthogonal');
 
+  /** Default max links per port (0 = unlimited). Used when port has no maxLinks set. */
+  readonly defaultMaxLinksPerPort = signal<number>(1);
+
   /** True while Space is held (for pan-with-left-drag cursor). */
   readonly spaceKeyDown = signal(false);
 
@@ -107,6 +110,11 @@ export class GraphEditorStateService {
   /** Set default link routing (for new links and toolbar select when no links selected). */
   setDefaultLinkRouting(routing: LinkRouting): void {
     this.defaultLinkRouting.set(routing);
+  }
+
+  /** Set default max links per port (0 = unlimited). Used by toolbar "apply to all". */
+  setDefaultMaxLinksPerPort(value: number): void {
+    this.defaultMaxLinksPerPort.set(value);
   }
 
   private _nodeIdCounter = 0;

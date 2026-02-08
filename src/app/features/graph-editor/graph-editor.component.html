@@ -51,6 +51,8 @@
     (sendToBack)="onSendToBack()"
     (lockUnlock)="onToggleLock()"
     (fieldMapperDemoClick)="onFieldMapperDemo()"
+    [maxLinksPerPortValue]="state.defaultMaxLinksPerPort()"
+    (maxLinksPerPortChange)="onMaxLinksPerPortChange($event)"
   />
   }
 
@@ -126,6 +128,7 @@
             <path
               class="link-preview-path"
               [attr.d]="getPreviewPathD()"
+              [attr.data-tick]="renderTick()"
               fill="none"
               stroke="var(--link-preview-stroke, #95a)"
               stroke-width="2"

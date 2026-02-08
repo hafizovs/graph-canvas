@@ -139,6 +139,15 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /** Apply max links per port: to selected nodes' ports if any nodes selected, else set global default. */
+  protected onMaxLinksPerPortChange(value: number): void {
+    this.state.setDefaultMaxLinksPerPort(value);
+    const nodeIds = this.state.selectedNodeIds();
+    if (nodeIds.size > 0) {
+      this.operations.setPortMaxLinksForNodes(Array.from(nodeIds), value);
+    }
+  }
+
   /** Initial snap-to-grid from config (input). */
   readonly snapToGrid = input<boolean>(true);
 
@@ -246,6 +255,8 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
   private _draggingCanvasPushedUndo = false;
   private _draggingCanvasStartSvg: { x: number; y: number } | null = null;
   private _draggingCanvasInitialPositions: Map<NodeId, { x: number; y: number }> | null = null;
+  /** Captured at port pointerdown so link completion uses same mode (input→output allowed when true). */
+  private _linkCreationBidirectional = false;
 
   protected readonly draggingFromPalette = signal<{
     shape: NodeShape;
@@ -411,6 +422,11 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     });
     effect(() => {
       const cfg = this.effectiveConfig();
+      const max = cfg.interactions?.maxLinksPerPort;
+      this.state.setDefaultMaxLinksPerPort(max !== undefined ? max : 1);
+    });
+    effect(() => {
+      const cfg = this.effectiveConfig();
       const lod = cfg.lod;
       if (!this.state.lodEnabled() || !lod || lod.useCanvas === false) {
         this.currentLodMode.set(null);
@@ -459,6 +475,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     effect(() => {
       if (!this.useCanvasLayer()) return;
       this.diagram();
+      this.renderTick(); // force redraw on any diagram mutation (delete, etc.)
       this.viewBox();
       this.containerSizeSignal();
       this.snapToGridEnabled();
@@ -792,15 +809,17 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  /** Start link drag from output port; set linking state and preview point. */
+  /** Start link drag from port; set linking state and preview point. When linkCreationBidirectional is false, only output ports can start. */
   protected onPortPointerDown(e: PortPointerEvent): void {
     if (this.state.linkingFrom()) return;
     if (!this.interactionEnabled('linkCreation')) return;
-    if (e.port.type !== 'output') return;
+    const bidirectional = this.effectiveConfig().interactions?.linkCreationBidirectional === true;
+    this._linkCreationBidirectional = bidirectional;
+    if (!bidirectional && e.port.type !== 'output') return;
     this.state.setLinkingFrom({
       portId: e.port.id,
       nodeId: e.node.id,
-      portType: 'output',
+      portType: e.port.type,
     });
     const pt = this.coordinate.clientToSvg(
       this.svgContainer?.nativeElement,
@@ -910,13 +929,16 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       const targetPortType = target?.getAttribute('data-port-type');
       const targetNodeId = target?.getAttribute('data-node-id') as NodeId | null;
 
-      if (
-        targetPortId &&
-        targetPortType === 'input' &&
-        targetNodeId &&
-        targetNodeId !== from.nodeId
-      ) {
-        this.operations.createLink(from.portId, from.nodeId, targetPortId, targetNodeId);
+      if (targetPortId && targetNodeId && targetNodeId !== from.nodeId) {
+        if (from.portType === 'output' && targetPortType === 'input') {
+          this.operations.createLink(from.portId, from.nodeId, targetPortId, targetNodeId);
+        } else if (
+          this._linkCreationBidirectional &&
+          from.portType === 'input' &&
+          targetPortType === 'output'
+        ) {
+          this.operations.createLink(targetPortId, targetNodeId, from.portId, from.nodeId);
+        }
       }
 
       this.state.setLinkingFrom(null);

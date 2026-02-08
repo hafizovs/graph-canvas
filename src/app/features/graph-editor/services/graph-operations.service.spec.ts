@@ -81,8 +81,7 @@ describe('GraphOperationsService', () => {
     const n3 = d.getNode('n3')!;
     const outPort = n1.ports.find((p) => p.type === 'output')!;
     const inPort = n3.ports.find((p) => p.type === 'input')!;
-    const added = operations.createLink(outPort.id, n1.id, inPort.id, n3.id);
-    expect(added).toBe(true);
+    operations.createLink(outPort.id, n1.id, inPort.id, n3.id);
     expect(d.links.length).toBe(2);
   });
 

@@ -15,6 +15,7 @@ export {
 export {
   CreateLinkAction,
   SetSelectedLinksRoutingAction,
+  SetPortMaxLinksAction,
   AddLinkWaypointAction,
   MoveLinkWaypointAction,
   RemoveLinkWaypointAction,

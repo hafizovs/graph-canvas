@@ -21,7 +21,10 @@ import {
   `,
 })
 export class EditorPageComponent {
-  readonly demoConfig = { toolbar: { visible: true } };
+  readonly demoConfig = {
+    toolbar: { visible: true },
+    interactions: { linkCreationBidirectional: true },
+  };
 
   readonly effectiveConfig = computed(() => mergeWithDefaults(this.demoConfig));
 }

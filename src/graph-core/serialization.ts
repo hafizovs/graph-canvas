@@ -16,6 +16,7 @@ export interface PortDto {
   side: PortSide;
   offset: number;
   type: PortType;
+  maxLinks?: number;
 }
 
 /**
@@ -88,6 +89,7 @@ export function serializeDiagram(diagram: Diagram): DiagramJson {
         side: p.side,
         offset: p.offset,
         type: p.type,
+        ...(p.maxLinks !== undefined && { maxLinks: p.maxLinks }),
       })),
     };
     
@@ -150,6 +152,7 @@ export function deserializeDiagram(json: DiagramJson): Diagram {
           side: p.side,
           offset: p.offset,
           type: p.type,
+          ...(p.maxLinks !== undefined && { maxLinks: p.maxLinks }),
         })
     );
     

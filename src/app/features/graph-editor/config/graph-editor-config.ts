@@ -30,6 +30,8 @@ export interface GraphEditorToolbarConfig {
   fieldMapperDemo?: boolean;
   lodToggle?: boolean;
   viewportCullingToggle?: boolean;
+  /** Show "Max links per port" input in toolbar. Default true. */
+  maxLinksPerPort?: boolean;
 }
 
 /** Palette feature flags. */
@@ -57,10 +59,14 @@ export interface GraphEditorInteractionsConfig {
   rubberBandSelection?: boolean;
   nodeDrag?: boolean;
   linkCreation?: boolean;
+  /** When true, link drag can start from both input and output ports; when false, only from output. Default false. */
+  linkCreationBidirectional?: boolean;
   linkWaypoints?: boolean;
   nodeContextMenu?: boolean;
   linkContextMenu?: boolean;
   groupResize?: boolean;
+  /** Max links per port (0 = unlimited). Default 1. */
+  maxLinksPerPort?: number;
 }
 
 /** Undo/redo configuration. */
@@ -137,6 +143,7 @@ const DEFAULT_TOOLBAR: Required<GraphEditorToolbarConfig> = {
   fieldMapperDemo: true,
   lodToggle: true,
   viewportCullingToggle: true,
+  maxLinksPerPort: true,
 };
 
 const DEFAULT_PALETTE: Required<GraphEditorPaletteConfig> = {
@@ -161,10 +168,12 @@ const DEFAULT_INTERACTIONS: Required<GraphEditorInteractionsConfig> = {
   rubberBandSelection: true,
   nodeDrag: true,
   linkCreation: true,
+  linkCreationBidirectional: false,
   linkWaypoints: true,
   nodeContextMenu: true,
   linkContextMenu: true,
   groupResize: true,
+  maxLinksPerPort: 1,
 };
 
 const DEFAULT_UNDO_REDO: Required<GraphEditorUndoRedoConfig> = {

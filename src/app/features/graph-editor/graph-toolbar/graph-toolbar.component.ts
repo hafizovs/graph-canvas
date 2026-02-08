@@ -52,6 +52,8 @@ export class GraphToolbarComponent {
   readonly panToolActive = input<boolean>(false);
   /** Current zoom as percentage (e.g. 100) for display. */
   readonly zoomPercent = input<number>(100);
+  /** Max links per port value for toolbar input (0 = unlimited). */
+  readonly maxLinksPerPortValue = input<number>(1);
 
   readonly addNode = output<void>();
   readonly deleteSelection = output<void>();
@@ -78,6 +80,7 @@ export class GraphToolbarComponent {
   readonly sendToBack = output<void>();
   readonly lockUnlock = output<void>();
   readonly fieldMapperDemoClick = output<void>();
+  readonly maxLinksPerPortChange = output<number>();
 
   protected show(key: keyof GraphEditorToolbarConfig): boolean {
     return this.toolbarConfig()?.[key] !== false;
@@ -89,6 +92,15 @@ export class GraphToolbarComponent {
     const value = select.value as LinkRouting;
     if (value === 'straight' || value === 'orthogonal') {
       this.linkRoutingChange.emit(value);
+    }
+  }
+
+  /** Emit maxLinksPerPortChange when user changes the max links input (0 = unlimited). */
+  protected onMaxLinksPerPortChange(event: Event): void {
+    const inputEl = event.target as HTMLInputElement;
+    const parsed = parseInt(inputEl.value, 10);
+    if (!Number.isNaN(parsed) && parsed >= 0) {
+      this.maxLinksPerPortChange.emit(parsed);
     }
   }
 

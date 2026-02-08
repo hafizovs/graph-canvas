@@ -76,6 +76,15 @@
   }
 }
 
+.toolbar-input-number {
+  width: 3rem;
+  padding: 0.375rem 0.5rem;
+  font-size: 0.875rem;
+  border: 1px solid var(--btn-border, #ccc);
+  border-radius: 4px;
+  background: var(--btn-bg, #f8f8f8);
+}
+
 .toolbar-file-input {
   position: absolute;
   width: 0;

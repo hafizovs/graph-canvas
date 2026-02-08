@@ -273,6 +273,18 @@
     <option value="orthogonal" [selected]="linkRouting() === 'orthogonal'">Orthogonal</option>
   </select>
   }
+  @if (show('maxLinksPerPort')) {
+  <span class="toolbar-sep" aria-hidden="true"></span>
+  <span class="toolbar-label">Max links/port:</span>
+  <input
+    type="number"
+    class="toolbar-input-number"
+    min="0"
+    [value]="maxLinksPerPortValue()"
+    (change)="onMaxLinksPerPortChange($event)"
+    [attr.title]="show('tooltips') !== false ? 'Max links per port (0 = unlimited). Applies to selected nodes or default.' : null"
+  />
+  }
   @if (show('zoom')) {
   <span class="toolbar-sep" aria-hidden="true"></span>
   @if (show('panTool')) {

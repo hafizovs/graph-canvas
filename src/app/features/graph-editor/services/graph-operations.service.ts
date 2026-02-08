@@ -14,6 +14,7 @@ import {
   ResizeGroupNodeAction,
   CreateLinkAction,
   SetSelectedLinksRoutingAction,
+  SetPortMaxLinksAction,
   AddLinkWaypointAction,
   MoveLinkWaypointAction,
   RemoveLinkWaypointAction,
@@ -77,16 +78,14 @@ export class GraphOperationsService {
     _sourceNodeId: NodeId,
     targetPortId: PortId,
     targetNodeId: NodeId
-  ): boolean {
-    const d = this.state.getDiagram();
-    if (!d) return false;
-    const hasExisting =
-      d.links.some(
-        (l) => l.sourcePortId === sourcePortId && l.targetPortId === targetPortId
-      ) || d.links.some((l) => l.targetPortId === targetPortId);
-    if (hasExisting) return false;
+  ): void {
     this.dispatcher.dispatch(new CreateLinkAction(sourcePortId, targetPortId, targetNodeId));
-    return true;
+  }
+
+  /** Set max links per port on all ports of the given nodes. */
+  setPortMaxLinksForNodes(nodeIds: NodeId[], value: number): void {
+    if (nodeIds.length === 0) return;
+    this.dispatcher.dispatch(new SetPortMaxLinksAction(nodeIds, value));
   }
 
   setSelectedLinksRouting(routing: LinkRouting): boolean {

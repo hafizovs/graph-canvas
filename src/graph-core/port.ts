@@ -15,6 +15,8 @@ export interface PortConfig {
   offset: number;
   /** Input (incoming) or output (outgoing). */
   type: PortType;
+  /** Max links allowed on this port (0 = unlimited). Overrides editor default when set. */
+  maxLinks?: number;
 }
 
 /**
@@ -26,6 +28,8 @@ export class Port implements PortConfig {
   readonly side: PortSide;
   readonly offset: number;
   readonly type: PortType;
+  /** Max links allowed on this port (0 = unlimited). Mutable so toolbar/actions can set it. */
+  maxLinks?: number;
 
   constructor(config: PortConfig) {
     this.id = config.id;
@@ -33,6 +37,7 @@ export class Port implements PortConfig {
     this.side = config.side;
     this.offset = config.offset;
     this.type = config.type;
+    this.maxLinks = config.maxLinks;
   }
 
   /**

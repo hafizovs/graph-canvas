@@ -1,9 +1,9 @@
 import { Link, Point } from '../../../../graph-core';
-import type { LinkId, LinkRouting, PortId } from '../../../../graph-core';
+import type { LinkId, LinkRouting, NodeId, PortId } from '../../../../graph-core';
 import type { ActionContext } from './action-context';
 import type { GraphEditorAction } from './graph-editor-action';
 
-/** Create a link from source port to target port (target must be input, no duplicate). */
+/** Create a link from source port to target port. Respects max links per port and no duplicate. */
 export class CreateLinkAction implements GraphEditorAction {
   readonly pushUndoBeforeExecute = true;
 
@@ -16,15 +16,37 @@ export class CreateLinkAction implements GraphEditorAction {
   execute(ctx: ActionContext): void {
     const d = ctx.state.getDiagram();
     if (!d) return;
-    const hasExisting =
-      d.links.some(
-        (l) => l.sourcePortId === this.sourcePortId && l.targetPortId === this.targetPortId
-      ) || d.links.some((l) => l.targetPortId === this.targetPortId);
-    if (hasExisting) return;
+    const duplicate = d.links.some(
+      (l) =>
+        l.sourcePortId === this.sourcePortId && l.targetPortId === this.targetPortId
+    );
+    if (duplicate) return;
+
+    const defaultMax = ctx.state.defaultMaxLinksPerPort();
+    const getPort = (portId: PortId) => {
+      for (const node of d!.nodes) {
+        const p = node.getPort(portId);
+        if (p) return p;
+      }
+      return undefined;
+    };
+    const countLinksAtPort = (portId: PortId) =>
+      d.links.filter(
+        (l) => l.sourcePortId === portId || l.targetPortId === portId
+      ).length;
+
+    const sourcePort = getPort(this.sourcePortId);
+    const targetPort = getPort(this.targetPortId);
+    const maxSource = sourcePort?.maxLinks ?? defaultMax;
+    const maxTarget = targetPort?.maxLinks ?? defaultMax;
+    if (maxSource > 0 && countLinksAtPort(this.sourcePortId) >= maxSource) return;
+    if (maxTarget > 0 && countLinksAtPort(this.targetPortId) >= maxTarget) return;
+
     const linkId = `l${ctx.state.incrementLinkIdCounter()}`;
-    const maxZ = d.links.length > 0
-      ? Math.max(...d.links.map((l) => l.zIndex ?? 0))
-      : -1;
+    const maxZ =
+      d.links.length > 0
+        ? Math.max(...d.links.map((l) => l.zIndex ?? 0))
+        : -1;
     d.addLink(
       new Link({
         id: linkId,
@@ -177,6 +199,29 @@ export class ClearLinkWaypointsAction implements GraphEditorAction {
     const link = d?.getLink(this.linkId);
     if (!d || !link || link.locked || link.points.length === 0) return;
     link.points.length = 0;
+    ctx.state.setDiagram(d, true);
+  }
+}
+
+/** Set maxLinks on all ports of the given nodes. */
+export class SetPortMaxLinksAction implements GraphEditorAction {
+  readonly pushUndoBeforeExecute = true;
+
+  constructor(
+    private readonly nodeIds: NodeId[],
+    private readonly value: number
+  ) {}
+
+  execute(ctx: ActionContext): void {
+    const d = ctx.state.getDiagram();
+    if (!d || this.nodeIds.length === 0) return;
+    for (const nodeId of this.nodeIds) {
+      const node = d.getNode(nodeId);
+      if (!node) continue;
+      for (const port of node.ports) {
+        port.maxLinks = this.value;
+      }
+    }
     ctx.state.setDiagram(d, true);
   }
 }
