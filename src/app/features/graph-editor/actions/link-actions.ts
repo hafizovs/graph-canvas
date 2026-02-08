@@ -128,7 +128,7 @@ export class MoveLinkWaypointAction implements GraphEditorAction {
       py = snapped.y;
     }
     link.points[this.index] = new Point(px, py);
-    ctx.state.incrementRenderTick();
+    ctx.state.setDiagram(d, true);
   }
 }
 
@@ -184,7 +184,7 @@ export class MoveLinkSegmentAction implements GraphEditorAction {
         link.points[this.segmentIndex].y + this.dy
       );
     }
-    ctx.state.incrementRenderTick();
+    ctx.state.setDiagram(d, true);
   }
 }
 

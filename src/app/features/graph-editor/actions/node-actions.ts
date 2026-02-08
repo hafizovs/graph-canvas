@@ -149,7 +149,7 @@ export class MoveNodesAction implements GraphEditorAction {
         n.setPosition(x, y);
       }
     }
-    ctx.state.incrementRenderTick();
+    ctx.state.setDiagram(d, true);
   }
 }
 
@@ -523,6 +523,6 @@ export class ResizeGroupNodeAction implements GraphEditorAction {
     groupNode.width = Math.max(this.newWidth, 100);
     groupNode.height = Math.max(this.newHeight, 80);
     groupNode.updateScale();
-    ctx.state.incrementRenderTick();
+    ctx.state.setDiagram(d, true);
   }
 }

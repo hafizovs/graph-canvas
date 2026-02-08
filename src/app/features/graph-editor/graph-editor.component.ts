@@ -215,6 +215,7 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Visible node IDs in viewBox (for culling when in SVG mode). */
   private readonly visibleInViewBox = computed(() => {
+    this.renderTick(); // re-run on in-place diagram mutations (add/delete/move) when diagram reference unchanged
     const d = this.diagram();
     const vb = this.viewBox();
     if (!d || vb.width <= 0 || vb.height <= 0)
