@@ -43,7 +43,8 @@ import { GraphLinkGeometryService } from './services/graph-link-geometry.service
 import { GraphCoordinateService, GRID_STEP } from './services/graph-coordinate.service';
 import { GraphViewportService } from './services/graph-viewport.service';
 import { GraphResizeService } from './services/graph-resize.service';
-import { GraphLodCanvasService } from './services/graph-lod-canvas.service';
+import { GraphLodCanvasService, rgbToIndex } from './services/graph-lod-canvas.service';
+import { getVisibleInViewBox } from './services/viewport-culling';
 import { GraphEditorKeyboardDirective } from './directives/graph-editor-keyboard.directive';
 import { serializeDiagram } from '../../../graph-core';
 import type {
@@ -166,22 +167,90 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     return Math.min(c.width / vb.width, c.height / vb.height);
   });
 
-  /** LOD is active when enabled in config and scale below threshold. */
-  protected readonly lodActive = computed(() => {
+  /** Node count for LOD decisions. */
+  private readonly nodeCount = computed(() => this.diagram()?.nodes.length ?? 0);
+
+  /** Level 0: canvas only, no interaction (scale < scaleThreshold). */
+  protected readonly useCanvasOnly = computed(() => {
     const cfg = this.effectiveConfig();
-    if (!cfg.lod?.enabled) return false;
+    if (!cfg.lod?.enabled || cfg.lod?.useCanvas === false) return false;
     const s = this.scale();
     const th = cfg.lod.scaleThreshold ?? 0.5;
     return s < th;
   });
 
-  /** Use Canvas 2D layer when LOD active and useCanvas is not false. */
-  protected readonly useCanvasLayer = computed(
-    () => this.lodActive() && (this.effectiveConfig().lod?.useCanvas !== false)
+  /** Force canvas+hit when node count >= this (never render all nodes in SVG). */
+  private readonly forceCanvasAbove = computed(
+    () => this.effectiveConfig().lod?.forceCanvasAboveNodeCount ?? 500
   );
+
+  /** Level 1: canvas + hit testing (medium zoom or count >= forceCanvasAbove). */
+  protected readonly useCanvasWithHit = computed(() => {
+    const cfg = this.effectiveConfig();
+    if (!cfg.lod?.enabled || cfg.lod?.useCanvas === false) return false;
+    const s = this.scale();
+    const th = cfg.lod.scaleThreshold ?? 0.5;
+    const th2 = cfg.lod.interactiveScaleThreshold ?? 1.2;
+    const n = this.nodeCount();
+    const forceN = this.forceCanvasAbove();
+    if (n >= forceN) return s >= th;
+    return s >= th && s < th2;
+  });
+
+  /** Level 2: SVG with viewport culling (scale >= interactiveThreshold and count < forceN). */
+  protected readonly useSvgCulled = computed(() => {
+    const cfg = this.effectiveConfig();
+    if (!cfg.lod?.enabled) return false;
+    const s = this.scale();
+    const th2 = cfg.lod.interactiveScaleThreshold ?? 1.2;
+    const n = this.nodeCount();
+    const forceN = this.forceCanvasAbove();
+    return s >= th2 && n < forceN;
+  });
+
+  /** Show canvas layer when canvas-only or canvas+hit. */
+  protected readonly useCanvasLayer = computed(
+    () => this.useCanvasOnly() || this.useCanvasWithHit()
+  );
+
+  /** Visible node IDs in viewBox (for culling when in SVG mode). */
+  private readonly visibleInViewBox = computed(() => {
+    const d = this.diagram();
+    const vb = this.viewBox();
+    if (!d || vb.width <= 0 || vb.height <= 0)
+      return { nodeIds: new Set<NodeId>(), linkIds: new Set<LinkId>() };
+    return getVisibleInViewBox(d, vb, this.linkGeometry);
+  });
+
+  /** Nodes to render in SVG: visible when useSvgCulled, else all when not canvas, else []. */
+  protected readonly nodesForRender = computed(() => {
+    if (this.useCanvasLayer()) return [];
+    const d = this.diagram();
+    if (!d) return [];
+    if (!this.useSvgCulled()) return d.nodes;
+    const { nodeIds } = this.visibleInViewBox();
+    return d.nodes.filter((n) => nodeIds.has(n.id));
+  });
+
+  /** Links to render in SVG: visible when useSvgCulled, else all when not canvas, else []. */
+  protected readonly linksForRender = computed(() => {
+    if (this.useCanvasLayer()) return [];
+    const d = this.diagram();
+    if (!d) return [];
+    if (!this.useSvgCulled()) return d.links;
+    const { linkIds } = this.visibleInViewBox();
+    return d.links.filter((l) => linkIds.has(l.id));
+  });
 
   private _resizeObserver: ResizeObserver | null = null;
   private _lodRafId = 0;
+  private _hitBufferCanvas: HTMLCanvasElement | null = null;
+  private _hitBufferCtx: CanvasRenderingContext2D | null = null;
+  private _hitBufferResult: { nodeIds: NodeId[]; linkIds: LinkId[] } | null = null;
+  private _draggingCanvasNodeId: NodeId | null = null;
+  private _draggingCanvasPushedUndo = false;
+  private _draggingCanvasStartSvg: { x: number; y: number } | null = null;
+  private _draggingCanvasInitialPositions: Map<NodeId, { x: number; y: number }> | null = null;
 
   protected readonly draggingFromPalette = signal<{
     shape: NodeShape;
@@ -373,6 +442,27 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       gridVisible,
       gridStep: GRID_STEP,
     });
+    if (this.useCanvasWithHit()) {
+      const w = Math.max(1, Math.floor(size.width));
+      const h = Math.max(1, Math.floor(size.height));
+      if (!this._hitBufferCanvas || this._hitBufferCanvas.width !== w || this._hitBufferCanvas.height !== h) {
+        this._hitBufferCanvas = document.createElement('canvas');
+        this._hitBufferCanvas.width = w;
+        this._hitBufferCanvas.height = h;
+        this._hitBufferCtx = this._hitBufferCanvas.getContext('2d');
+      }
+      if (this._hitBufferCtx) {
+        this._hitBufferResult = this.lodCanvasService.drawHitBuffer(
+          this._hitBufferCtx,
+          diagram,
+          vb,
+          w,
+          h
+        );
+      }
+    } else {
+      this._hitBufferResult = null;
+    }
   }
 
   protected onFieldMapperDemo(): void {
@@ -674,6 +764,18 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
       this.state.setLinkingPreviewPoint(pt);
       return;
     }
+    if (this._draggingCanvasNodeId && this._draggingCanvasStartSvg && this._draggingCanvasInitialPositions) {
+      if (!this._draggingCanvasPushedUndo) {
+        this._draggingCanvasPushedUndo = true;
+        this.pushUndoIfEnabled();
+      }
+      const pt = this.clientToSvgFromWrapper(event.clientX, event.clientY);
+      const dx = pt.x - this._draggingCanvasStartSvg.x;
+      const dy = pt.y - this._draggingCanvasStartSvg.y;
+      this.operations.moveNodes(this._draggingCanvasInitialPositions, dx, dy);
+      this.scheduleLodDraw();
+      return;
+    }
     const svg = this.svgContainer?.nativeElement;
     const wrapper = this.canvasWrapperRef?.nativeElement;
     if (this._panning) {
@@ -712,6 +814,13 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
 
   /** Complete or cancel link; end pan or rubber-band. (Waypoint/segment drag use document listeners.) */
   protected onContainerPointerUp(event: PointerEvent): void {
+    if (this._draggingCanvasNodeId) {
+      (event.target as Element).releasePointerCapture?.(event.pointerId);
+      this._draggingCanvasNodeId = null;
+      this._draggingCanvasStartSvg = null;
+      this._draggingCanvasInitialPositions = null;
+      return;
+    }
     if (this._panning) {
       const wasClick = Math.hypot(
         event.clientX - this._panning.startClientX,
@@ -1062,6 +1171,18 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
     this.operations.deleteSelection();
   }
 
+  /** Convert client coords to SVG using wrapper rect and viewBox (for canvas mode). */
+  private clientToSvgFromWrapper(clientX: number, clientY: number): { x: number; y: number } {
+    const wrapper = this.canvasWrapperRef?.nativeElement;
+    if (!wrapper) return { x: 0, y: 0 };
+    const rect = wrapper.getBoundingClientRect();
+    const vb = this.viewBox();
+    return {
+      x: vb.x + ((clientX - rect.left) / rect.width) * vb.width,
+      y: vb.y + ((clientY - rect.top) / rect.height) * vb.height,
+    };
+  }
+
   /** Pan, rubber-band, or clear selection on canvas pointer down. */
   protected onCanvasPointerDown(event: PointerEvent): void {
     const isMiddle = event.button === 1;
@@ -1081,6 +1202,44 @@ export class GraphEditorComponent implements AfterViewInit, OnDestroy {
           target: targetEl,
         };
         targetEl.setPointerCapture?.(event.pointerId);
+        return;
+      }
+      if (this.useCanvasWithHit() && event.button === 0 && this._hitBufferCanvas && this._hitBufferCtx && this._hitBufferResult) {
+        const canvas = this.lodCanvasRef?.nativeElement;
+        if (canvas) {
+          const rect = canvas.getBoundingClientRect();
+          const px = (event.clientX - rect.left) * (canvas.width / rect.width);
+          const py = (event.clientY - rect.top) * (canvas.height / rect.height);
+          const pxI = Math.floor(px);
+          const pyI = Math.floor(py);
+          if (pxI >= 0 && pxI < this._hitBufferCanvas.width && pyI >= 0 && pyI < this._hitBufferCanvas.height) {
+            const data = this._hitBufferCtx.getImageData(pxI, pyI, 1, 1).data;
+            const hitIndex = rgbToIndex(data[0], data[1], data[2]);
+            const { nodeIds, linkIds } = this._hitBufferResult;
+            if (hitIndex >= 1 && hitIndex <= nodeIds.length) {
+              const nodeId = nodeIds[hitIndex - 1];
+              this.state.setNodeSelection(new Set([nodeId]));
+              this.state.setLinkSelection(new Set());
+              const d = this.state.getDiagram();
+              const node = d?.getNode(nodeId);
+              if (node && this.interactionEnabled('nodeDrag')) {
+                this._draggingCanvasNodeId = nodeId;
+                this._draggingCanvasPushedUndo = false;
+                this._draggingCanvasStartSvg = this.clientToSvgFromWrapper(event.clientX, event.clientY);
+                const r = node.getRect();
+                this._draggingCanvasInitialPositions = new Map([[nodeId, { x: r.x, y: r.y }]]);
+                (event.target as Element).setPointerCapture?.(event.pointerId);
+              }
+            } else if (hitIndex > nodeIds.length && hitIndex <= nodeIds.length + linkIds.length) {
+              const linkId = linkIds[hitIndex - 1 - nodeIds.length];
+              this.state.setNodeSelection(new Set());
+              this.state.setLinkSelection(new Set([linkId]));
+            } else {
+              this.selectedWaypoint.set(null);
+              this.state.clearSelection();
+            }
+          }
+        }
       }
       return;
     }

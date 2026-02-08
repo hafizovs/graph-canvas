@@ -15,4 +15,8 @@ export { GraphResizeService, type ResizeHandle } from './graph-resize.service';
 export {
   GraphLodCanvasService,
   type LodCanvasDrawOptions,
+  type HitBufferResult,
+  indexToRgb,
+  rgbToIndex,
 } from './graph-lod-canvas.service';
+export { getVisibleInViewBox, type VisibleInViewBoxResult, type LinkGeometryLike } from './viewport-culling';

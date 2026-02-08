@@ -54,3 +54,18 @@ export const Stress10000: Story = {
     },
   },
 };
+
+export const Stress100000: Story = {
+  args: {
+    nodeCount: 100000,
+  },
+  parameters: {
+    chromatic: { disableSnapshot: true },
+    docs: {
+      description: {
+        story:
+          'Maximum stress test with 100000 nodes and 99999 links. Use LOD and viewport culling for acceptable performance. Chromatic snapshots disabled.',
+      },
+    },
+  },
+};

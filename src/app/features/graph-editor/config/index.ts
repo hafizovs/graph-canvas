@@ -9,5 +9,7 @@ export {
   createDefaultConfig,
   mergeWithDefaults,
   DEFAULT_LOD_SCALE_THRESHOLD,
+  DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD,
+  DEFAULT_LOD_FORCE_CANVAS_ABOVE_NODE_COUNT,
   GRAPH_EDITOR_CONFIG,
 } from './graph-editor-config';

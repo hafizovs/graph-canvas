@@ -73,8 +73,12 @@ export interface GraphEditorLodConfig {
   enabled?: boolean;
   /** When LOD is active, use Canvas 2D for rendering. Default true when LOD enabled. */
   useCanvas?: boolean;
-  /** Scale threshold: LOD active when scale < this. Default 0.5. */
+  /** Scale threshold: canvas-only (no interaction) when scale < this. Default 0.5. */
   scaleThreshold?: number;
+  /** Scale above which SVG culled is allowed when node count is below forceCanvasAboveNodeCount. Default 1.2. */
+  interactiveScaleThreshold?: number;
+  /** Never render all nodes in SVG when node count >= this; use canvas+hit instead. Default 500. */
+  forceCanvasAboveNodeCount?: number;
 }
 
 /**
@@ -154,10 +158,15 @@ const DEFAULT_UNDO_REDO: Required<GraphEditorUndoRedoConfig> = {
 /** Default LOD: disabled, useCanvas true, scaleThreshold 0.5. */
 export const DEFAULT_LOD_SCALE_THRESHOLD = 0.5;
 
+export const DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD = 1.2;
+export const DEFAULT_LOD_FORCE_CANVAS_ABOVE_NODE_COUNT = 500;
+
 const DEFAULT_LOD: Required<GraphEditorLodConfig> = {
   enabled: false,
   useCanvas: true,
   scaleThreshold: DEFAULT_LOD_SCALE_THRESHOLD,
+  interactiveScaleThreshold: DEFAULT_LOD_INTERACTIVE_SCALE_THRESHOLD,
+  forceCanvasAboveNodeCount: DEFAULT_LOD_FORCE_CANVAS_ABOVE_NODE_COUNT,
 };
 
 /** Creates default config: all enabled except toolbar.visible = false. */

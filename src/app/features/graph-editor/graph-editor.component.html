@@ -102,7 +102,7 @@
           />
         }
         <g class="links-layer">
-          @for (link of diagram()?.links ?? []; track link.id) {
+          @for (link of linksForRender(); track link.id) {
             <g
               app-graph-link
               [link]="link"
@@ -132,7 +132,7 @@
           }
         </g>
         <g class="nodes-layer">
-          @for (node of diagram()?.nodes ?? []; track node.id) {
+          @for (node of nodesForRender(); track node.id) {
             @if (node.nodeType === 'group') {
               <g
                 app-graph-group-node

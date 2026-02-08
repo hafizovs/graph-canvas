@@ -36,6 +36,7 @@ export class StressTestStoryWrapperComponent {
     toolbar: { visible: true } as const,
     palette: { visible: false } as const,
     initialDiagram: this.result().diagram,
+    lod: { enabled: true, useCanvas: true, scaleThreshold: 0.5, interactiveScaleThreshold: 1.2, forceCanvasAboveNodeCount: 500 },
   }));
 
   protected readonly metrics = computed(() => this.result().metrics);
