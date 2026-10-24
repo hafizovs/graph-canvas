@@ -1,5 +1,23 @@
 # Graph Canvas
 
+## About
+
+Graph Canvas is an Angular 21 graph editor (SVG + HTML hybrid) for node-link diagrams. It supports nodes, links, waypoints, groups, undo/redo, pan/zoom, and palette drag-and-drop. The code is split into a framework-agnostic domain layer, an application layer of signals and actions, and UI components.
+
+## Capabilities
+
+- Domain model in `src/graph-core/`: `Diagram`, `Node`, `GroupNode`, `Link`, `Port`, `Point`, and serialization
+- Editor state in signals, actions via `GraphEditorActionDispatcher`, and `GraphOperationsService` as a thin facade
+- Services for viewport, coordinates, link geometry, resize, and undo/redo
+- UI pieces: graph editor, node, link, toolbar, palette, and a keyboard directive
+
+## Functionality
+
+- Run `ng serve` and open `http://localhost:4200/`.
+- Drag items from the palette, connect nodes, and edit waypoints and groups.
+- Pan and zoom the canvas, then undo or redo.
+- Build and test with `ng build`, `ng test`, and `ng e2e` as documented below.
+
 Angular 21 graph editor (SVG + HTML hybrid) for node-link diagrams. Supports nodes, links, waypoints, groups, undo/redo, pan/zoom, and palette drag-and-drop.
 
 ## Architecture
