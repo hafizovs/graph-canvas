@@ -25,6 +25,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:gh-pages
+      - run: npm run build:storybook:gh-pages
+      - name: Bundle Storybook into Pages artifact
+        run: |
+          mkdir -p dist/graph-canvas/browser/storybook
+          cp -r storybook-static/. dist/graph-canvas/browser/storybook/
       - name: SPA 404 fallback
         run: cp dist/graph-canvas/browser/index.html dist/graph-canvas/browser/404.html
       - uses: actions/upload-pages-artifact@v3
