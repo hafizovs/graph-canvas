@@ -8,7 +8,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "storybook": "ng run graph-canvas:storybook",
-    "build-storybook": "ng run graph-canvas:build-storybook"
+    "build-storybook": "ng run graph-canvas:build-storybook",
+    "build:gh-pages": "ng build --configuration production --base-href /graph-canvas/"
   },
   "prettier": {
     "printWidth": 100,
