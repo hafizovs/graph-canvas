@@ -33,3 +33,9 @@
 
 - Add JSDoc to public APIs (classes, methods, `@param`, `@returns`).
 - Update this file and `docs/ARCHITECTURE.md` when adding new layers or significant patterns.
+
+## GitHub Pages
+
+Production preview (app + Storybook) deploys from `develop` through `.github/workflows/pages.yml`.
+Ensure repository Settings → Pages → Source is set to **GitHub Actions**.
+
