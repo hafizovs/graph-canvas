@@ -10,7 +10,7 @@
     "storybook": "ng run graph-canvas:storybook",
     "build-storybook": "ng run graph-canvas:build-storybook",
     "build:gh-pages": "ng build --configuration production --base-href /graph-canvas/",
-    "build:storybook:gh-pages": "ng run graph-canvas:build-storybook -- --preview-url=/graph-canvas/storybook/"
+    "build:storybook:gh-pages": "ng run graph-canvas:build-storybook"
   },
   "prettier": {
     "printWidth": 100,
