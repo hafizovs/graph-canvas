@@ -2,6 +2,14 @@
 
 ## About
 
+## Live demo
+
+- App: https://hafizovs.github.io/graph-canvas/
+- Storybook: https://hafizovs.github.io/graph-canvas/storybook/
+
+Deployed from the `develop` branch via GitHub Actions Pages.
+
+
 Graph Canvas is an Angular 21 graph editor (SVG + HTML hybrid) for node-link diagrams. It supports nodes, links, waypoints, groups, undo/redo, pan/zoom, and palette drag-and-drop. The code is split into a framework-agnostic domain layer, an application layer of signals and actions, and UI components.
 
 ## Capabilities
