@@ -75,6 +75,7 @@ describe('GraphOperationsService', () => {
   });
 
   it('createLink adds link when target is free', () => {
+    state.defaultMaxLinksPerPort.set(0);
     const d = state.getDiagram()!;
     d.removeLink('l2');
     const n1 = d.getNode('n1')!;

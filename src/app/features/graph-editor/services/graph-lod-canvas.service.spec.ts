@@ -6,6 +6,7 @@ import { Diagram, Node, Link, Port } from '../../../../graph-core';
 
 function createMockCtx(): CanvasRenderingContext2D {
   return {
+    clearRect: () => {},
     save: () => {},
     restore: () => {},
     beginPath: () => {},
